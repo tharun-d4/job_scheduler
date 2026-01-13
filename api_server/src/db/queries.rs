@@ -11,7 +11,7 @@ pub async fn insert_task(pool: &PgPool, task: NewTask) -> Result<Uuid, sqlx::Err
         )
         RETURNING id",
     )
-    .bind(task.id)
+    .bind(Uuid::now_v7())
     .bind(task.task_type)
     .bind(task.payload)
     .bind(task.status)

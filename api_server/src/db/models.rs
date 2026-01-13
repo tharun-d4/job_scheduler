@@ -30,7 +30,6 @@ pub struct Task {
 
 #[derive(Debug)]
 pub struct NewTask {
-    pub id: Uuid,
     pub task_type: String,
     pub payload: JsonValue,
     pub status: TaskStatus,
