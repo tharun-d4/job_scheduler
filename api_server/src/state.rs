@@ -1,7 +1,7 @@
 use sqlx::postgres::PgPool;
 
 pub struct AppState {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl AppState {
