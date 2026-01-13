@@ -7,6 +7,7 @@ use serde_json::Value as JsonValue;
 
 use crate::{
     db::{models, queries},
+    error::ServerError,
     state::AppState,
 };
 
@@ -21,10 +22,10 @@ pub struct JobPayload {
 pub async fn create_job(
     State(state): State<Arc<AppState>>,
     Json(req_payload): Json<JobPayload>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, ServerError> {
     let state = state.clone();
 
-    queries::insert_job(
+    let job_id = queries::insert_job(
         &state.pool,
         models::NewJob {
             job_type: req_payload.job_type,
@@ -41,7 +42,6 @@ pub async fn create_job(
             created_at: Utc::now(),
         },
     )
-    .await
-    .unwrap();
-    "Create job called"
+    .await?;
+    Ok(job_id.to_string())
 }
