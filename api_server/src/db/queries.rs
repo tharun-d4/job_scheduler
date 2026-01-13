@@ -1,25 +1,25 @@
 use sqlx::{postgres::PgPool, query_scalar};
 use uuid::Uuid;
 
-use super::models::NewTask;
+use super::models::NewJob;
 
-pub async fn insert_task(pool: &PgPool, task: NewTask) -> Result<Uuid, sqlx::Error> {
-    let task_id = query_scalar(
-        "INSERT INTO tasks
+pub async fn insert_job(pool: &PgPool, job: NewJob) -> Result<Uuid, sqlx::Error> {
+    let job_id = query_scalar(
+        "INSERT INTO jobs
         VALUES (
             $1, $2, $3, $4, $5, $6, $7
         )
         RETURNING id",
     )
     .bind(Uuid::now_v7())
-    .bind(task.task_type)
-    .bind(task.payload)
-    .bind(task.status)
-    .bind(task.priority as i16)
-    .bind(task.max_retries as i16)
-    .bind(task.created_at)
+    .bind(job.job_type)
+    .bind(job.payload)
+    .bind(job.status)
+    .bind(job.priority as i16)
+    .bind(job.max_retries as i16)
+    .bind(job.created_at)
     .fetch_one(pool)
     .await?;
 
-    Ok(task_id)
+    Ok(job_id)
 }

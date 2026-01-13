@@ -3,8 +3,8 @@ use sqlx::types::JsonValue;
 use uuid::Uuid;
 
 #[derive(Debug, sqlx::Type)]
-#[sqlx(type_name = "task_status", rename_all = "lowercase")]
-pub enum TaskStatus {
+#[sqlx(type_name = "job_status", rename_all = "lowercase")]
+pub enum JobStatus {
     Pending,
     Running,
     Completed,
@@ -12,11 +12,11 @@ pub enum TaskStatus {
 }
 
 #[derive(Debug)]
-pub struct Task {
+pub struct Job {
     pub id: Uuid,
-    pub task_type: String,
+    pub job_type: String,
     pub payload: JsonValue,
-    pub status: TaskStatus,
+    pub status: JobStatus,
     pub priority: i8,
     pub max_retries: u8,
     pub created_at: DateTime<Utc>,
@@ -29,10 +29,10 @@ pub struct Task {
 }
 
 #[derive(Debug)]
-pub struct NewTask {
-    pub task_type: String,
+pub struct NewJob {
+    pub job_type: String,
     pub payload: JsonValue,
-    pub status: TaskStatus,
+    pub status: JobStatus,
     pub priority: i8,
     pub max_retries: u8,
     pub created_at: DateTime<Utc>,

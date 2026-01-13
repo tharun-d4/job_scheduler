@@ -11,25 +11,25 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize)]
-pub struct TaskPayload {
-    task_type: String,
+pub struct JobPayload {
+    job_type: String,
     payload: JsonValue,
     priority: Option<i8>,
     max_retries: Option<u8>,
 }
 
-pub async fn create_task(
+pub async fn create_job(
     State(state): State<Arc<AppState>>,
-    Json(req_payload): Json<TaskPayload>,
+    Json(req_payload): Json<JobPayload>,
 ) -> impl IntoResponse {
     let state = state.clone();
 
-    queries::insert_task(
+    queries::insert_job(
         &state.pool,
-        models::NewTask {
-            task_type: req_payload.task_type,
+        models::NewJob {
+            job_type: req_payload.job_type,
             payload: req_payload.payload,
-            status: models::TaskStatus::Pending,
+            status: models::JobStatus::Pending,
             priority: match req_payload.priority {
                 Some(val) => val,
                 None => 1,
@@ -43,5 +43,5 @@ pub async fn create_task(
     )
     .await
     .unwrap();
-    "Create task called"
+    "Create job called"
 }
