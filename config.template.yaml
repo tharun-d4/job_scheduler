@@ -1,5 +1,5 @@
 database:
-  url: "postgres://user:password@127.0.0.1:9000/main_db"
+  url: "postgres://user:password@127.0.0.1:9000/app_db"
   pool_size: 5
 
 server:
