@@ -21,7 +21,7 @@ pub struct AppConfig {
 
 pub fn load_config() -> Result<AppConfig, ConfigError> {
     let config = Config::builder()
-        .add_source(File::new("./config.yaml", FileFormat::Yaml))
+        .add_source(File::new("./config", FileFormat::Yaml))
         .build()?;
 
     let config = config.try_deserialize()?;
