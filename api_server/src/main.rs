@@ -1,14 +1,10 @@
-use api_server::{app, db::connection, error, state};
+use api_server::error;
 
 #[tokio::main]
 async fn main() -> Result<(), error::ServerError> {
     dotenvy::dotenv().ok();
 
-    let pool = connection::create_pool().await?;
-    connection::run_migrations(&pool).await?;
-
-    let state = state::AppState::new(pool);
-    let app = app::create_router(state);
+    let app = api_server::build_app().await?;
 
     let host = std::env::var("SERVER_HOST").expect("SERVER_HOST env variable not found");
     let port = std::env::var("SERVER_PORT").expect("SERVER_PORT env variable not found");
