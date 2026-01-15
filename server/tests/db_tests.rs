@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sqlx::{PgPool, types::JsonValue};
 
-use api_server::db::{models::*, queries};
+use server::db::{models::*, queries};
 
 #[sqlx::test(migrations = "../migrations")]
 async fn test_insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error> {

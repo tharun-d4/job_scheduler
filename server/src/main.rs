@@ -1,4 +1,4 @@
-use api_server::{app, db::connection, error, state};
+use server::{app, db::connection, error, state};
 use shared::config::load_config;
 
 #[tokio::main]
