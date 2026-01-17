@@ -27,3 +27,13 @@ pub struct Job {
     pub error_message: Option<String>,
     pub result: Option<JsonValue>,
 }
+
+#[derive(Debug)]
+pub struct NewJob {
+    pub job_type: String,
+    pub payload: JsonValue,
+    pub status: JobStatus,
+    pub priority: i8,
+    pub max_retries: u8,
+    pub created_at: DateTime<Utc>,
+}
