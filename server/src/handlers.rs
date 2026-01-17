@@ -5,12 +5,11 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
 
-use crate::{
-    db::{models, queries},
-    error::ServerError,
-    state::AppState,
+use crate::{error::ServerError, state::AppState};
+use shared::db::{
+    models::{JobStatus, NewJob},
+    queries::insert_job,
 };
-use shared::db::models::JobStatus;
 
 #[derive(Debug, Deserialize)]
 pub struct JobPayload {
@@ -26,9 +25,9 @@ pub async fn create_job(
 ) -> Result<impl IntoResponse, ServerError> {
     let state = state.clone();
 
-    let job_id = queries::insert_job(
+    let job_id = insert_job(
         &state.pool,
-        models::NewJob {
+        NewJob {
             job_type: req_payload.job_type,
             payload: req_payload.payload,
             status: JobStatus::Pending,
