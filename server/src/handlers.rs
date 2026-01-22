@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{extract::State, http::StatusCode, Json};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -16,8 +16,8 @@ use shared::db::{
 pub struct JobPayload {
     job_type: String,
     payload: JsonValue,
-    priority: Option<i8>,
-    max_retries: Option<u8>,
+    priority: Option<i16>,
+    max_retries: Option<i16>,
 }
 
 #[derive(Debug, Serialize)]
