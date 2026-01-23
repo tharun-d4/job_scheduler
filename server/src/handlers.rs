@@ -62,6 +62,9 @@ pub async fn get_job(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Job>, ServerError> {
-    let job = get_job_by_id(&state.pool, id).await?;
-    Ok(Json(job))
+    if let Some(job) = get_job_by_id(&state.pool, id).await {
+        Ok(Json(job))
+    } else {
+        Err(ServerError::NotFound("Job Not Found".to_string()))
+    }
 }
