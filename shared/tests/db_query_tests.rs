@@ -37,8 +37,9 @@ async fn test_get_job_by_id(pool: PgPool) -> Result<(), sqlx::Error> {
         },
     )
     .await?;
-    let job = queries::get_job_by_id(&pool, job_id).await?;
+    let job = queries::get_job_by_id(&pool, job_id).await;
 
-    assert_eq!(job_id, job.id);
+    assert!(job.is_some());
+    assert_eq!(job_id, job.unwrap().id);
     Ok(())
 }
