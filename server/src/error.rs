@@ -8,8 +8,9 @@ use axum::{
 
 #[derive(Debug)]
 pub enum ServerError {
-    DatabaseError(sqlx::Error),
-    InternalError(IoError),
+    Database(sqlx::Error),
+    Internal(IoError),
+    NotFound(String),
 }
 
 #[derive(serde::Serialize)]
@@ -19,16 +20,17 @@ struct ErrorResponse {
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
-        //let (status_code, msg) = match self {
-        //    ServerError::DatabaseError(_) => (
-        //        StatusCode::INTERNAL_SERVER_ERROR,
-        //        "Something went wrong".to_string(),
-        //    ),
-        //};
-        let (status_code, msg) = (
+        let generic_error = (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Something went wrong".to_string(),
         );
+
+        tracing::error!(?self, "Error occurred");
+        let (status_code, msg) = match self {
+            ServerError::NotFound(s) => (StatusCode::NOT_FOUND, s),
+            _ => generic_error,
+        };
+
         let body = Json(ErrorResponse { error: msg });
         (status_code, body).into_response()
     }
@@ -36,12 +38,12 @@ impl IntoResponse for ServerError {
 
 impl From<sqlx::Error> for ServerError {
     fn from(err: sqlx::Error) -> Self {
-        ServerError::DatabaseError(err)
+        ServerError::Database(err)
     }
 }
 
 impl From<IoError> for ServerError {
     fn from(err: IoError) -> Self {
-        ServerError::InternalError(err)
+        ServerError::Internal(err)
     }
 }
