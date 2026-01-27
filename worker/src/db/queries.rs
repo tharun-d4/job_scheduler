@@ -1,10 +1,12 @@
 use chrono::Utc;
-use sqlx::{postgres::PgPool, query};
+use sqlx::{postgres::PgPool, query, query_as};
 use uuid::Uuid;
 
-pub async fn register(pool: &PgPool, id: Uuid, pid: i32) -> Result<(), sqlx::Error> {
+use shared::db::models::{Job, JobStatus};
+
+pub async fn register(pool: &PgPool, worker_id: Uuid, pid: i32) -> Result<(), sqlx::Error> {
     query("INSERT INTO workers (id, pid, started_at, last_heartbeat) VALUES ($1, $2, $3, $3);")
-        .bind(id)
+        .bind(worker_id)
         .bind(pid)
         .bind(Utc::now())
         .execute(pool)
@@ -12,12 +14,35 @@ pub async fn register(pool: &PgPool, id: Uuid, pid: i32) -> Result<(), sqlx::Err
     Ok(())
 }
 
-pub async fn heartbeat(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn heartbeat(pool: &PgPool, worker_id: Uuid) -> Result<(), sqlx::Error> {
     query("UPDATE workers SET last_heartbeat=$2 WHERE id=$1;")
-        .bind(id)
+        .bind(worker_id)
         .bind(Utc::now())
         .execute(pool)
         .await?;
 
     Ok(())
+}
+
+pub async fn claim_job(pool: &PgPool, worker_id: Uuid) -> Result<Job, sqlx::Error> {
+    query_as::<_, Job>(
+        "UPDATE jobs
+        SET
+            status = $1,
+            worker_id = $2,
+            started_at = $3
+        WHERE id = (
+            SELECT id FROM jobs
+            WHERE status = $4
+            ORDER BY priority DESC, created_at ASC
+            LIMIT 1
+        )
+        RETURNING *",
+    )
+    .bind(JobStatus::Running)
+    .bind(worker_id)
+    .bind(Utc::now())
+    .bind(JobStatus::Pending)
+    .fetch_one(pool)
+    .await
 }
