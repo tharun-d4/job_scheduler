@@ -8,8 +8,8 @@ use shared::db::{
 };
 
 #[sqlx::test(migrations = "../migrations")]
-async fn test_insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error> {
-    queries::insert_job(
+async fn insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error> {
+    let job_id = queries::insert_job(
         &pool,
         NewJob {
             job_type: "new_job".to_string(),
@@ -21,6 +21,7 @@ async fn test_insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error>
         },
     )
     .await?;
+    assert_eq!(job_id.get_version_num(), 7);
     Ok(())
 }
 
@@ -28,7 +29,7 @@ async fn test_insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error>
     migrations = "../migrations",
     fixtures(path = "../../test_fixtures", scripts("jobs"))
 )]
-async fn test_get_job_by_id(pool: PgPool) -> Result<(), sqlx::Error> {
+async fn get_job_by_id_returns_job(pool: PgPool) {
     let job_id = "019bfadc-28bb-781d-9d22-acf23fe50117"
         .parse::<Uuid>()
         .unwrap();
@@ -36,5 +37,4 @@ async fn test_get_job_by_id(pool: PgPool) -> Result<(), sqlx::Error> {
 
     assert!(job.is_some());
     assert_eq!(job_id, job.unwrap().id);
-    Ok(())
 }
