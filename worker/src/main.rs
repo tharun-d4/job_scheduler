@@ -2,7 +2,7 @@ use tracing::{info, instrument};
 use uuid::Uuid;
 
 use shared::{config::load_config, db::connection, tracing::init_tracing};
-use worker::db::queries;
+use worker::{db::queries, executor};
 
 async fn sleep(ms: u64) {
     tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
@@ -27,6 +27,9 @@ async fn main() {
     );
 
     loop {
+        let job = queries::claim_job(&pool, worker_id).await.unwrap();
+
+        executor::execute_job(job).await;
         sleep(10000).await;
     }
 }
