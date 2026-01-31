@@ -1,4 +1,4 @@
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 use uuid::Uuid;
 
 use shared::{config::load_config, db::connection, tracing::init_tracing};
@@ -27,17 +27,16 @@ async fn main() {
     );
 
     loop {
-        let job = queries::claim_job(&pool, worker_id).await.unwrap();
-        let job_id = job.id.clone();
-
-        match executor::execute_job(job).await {
-            Ok(result) => {
-                queries::mark_job_as_completed(&pool, job_id, result)
-                    .await
-                    .unwrap();
+        let claim_result = queries::claim_job(&pool, worker_id).await;
+        match claim_result {
+            Ok(job) => {
+                executor::execute_job(&pool, job).await;
             }
-            Err(_) => {}
+            Err(err) => {
+                error!("Error occurred while fetching new job: {:?}", err);
+            }
         }
+
         sleep(10000).await;
     }
 }
