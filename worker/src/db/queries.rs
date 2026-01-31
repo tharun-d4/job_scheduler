@@ -30,10 +30,12 @@ pub async fn claim_job(pool: &PgPool, worker_id: Uuid) -> Result<Job, sqlx::Erro
         SET
             status = $1,
             worker_id = $2,
-            started_at = $3
+            started_at = $3,
+            attempts = attempts + 1
         WHERE id = (
             SELECT id FROM jobs
             WHERE status = $4
+            AND attempts < max_retries
             ORDER BY priority DESC, created_at ASC
             LIMIT 1
         )
