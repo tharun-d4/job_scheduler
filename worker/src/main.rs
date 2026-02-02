@@ -22,7 +22,7 @@ async fn main() {
         worker_id, pid
     );
 
-    heartbeat::start_heartbeat_task(pool.clone(), worker_id).await;
+    heartbeat::start_heartbeat_task(config.worker.heartbeat, worker_id, pool.clone()).await;
 
     loop {
         let claim_result = queries::claim_job(&pool, worker_id).await;

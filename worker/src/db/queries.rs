@@ -14,7 +14,7 @@ pub async fn register(pool: &PgPool, worker_id: Uuid, pid: i32) -> Result<(), sq
     Ok(())
 }
 
-pub async fn heartbeat(pool: &PgPool, worker_id: Uuid) -> Result<(), sqlx::Error> {
+pub async fn update_heartbeat(pool: &PgPool, worker_id: Uuid) -> Result<(), sqlx::Error> {
     query("UPDATE workers SET last_heartbeat=$2 WHERE id=$1;")
         .bind(worker_id)
         .bind(Utc::now())

@@ -2,13 +2,14 @@ use sqlx::postgres::PgPool;
 use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::db::queries::heartbeat;
+use crate::db::queries::update_heartbeat;
 
-const HEARTBEAT_INTERVAL_SECS: u64 = 30;
-
-pub async fn start_heartbeat_task(pool: PgPool, worker_id: Uuid) -> tokio::task::JoinHandle<()> {
-    let mut interval =
-        tokio::time::interval(std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS));
+pub async fn start_heartbeat_task(
+    heartbeat: u64,
+    worker_id: Uuid,
+    pool: PgPool,
+) -> tokio::task::JoinHandle<()> {
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(heartbeat));
 
     interval.tick().await;
 
@@ -16,7 +17,7 @@ pub async fn start_heartbeat_task(pool: PgPool, worker_id: Uuid) -> tokio::task:
         loop {
             interval.tick().await;
 
-            if let Err(e) = heartbeat(&pool, worker_id).await {
+            if let Err(e) = update_heartbeat(&pool, worker_id).await {
                 error!(worker_id = %worker_id, error = %e, "Heartbeat failed");
             } else {
                 info!(worker_id = %worker_id, "Heartbeat sent");
