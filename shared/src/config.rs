@@ -14,9 +14,15 @@ pub struct Server {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Worker {
+    pub heartbeat: u64,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub database: Database,
     pub server: Server,
+    pub worker: Worker,
 }
 
 pub fn load_config(path: &str) -> Result<AppConfig, ConfigError> {
