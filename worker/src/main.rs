@@ -4,10 +4,6 @@ use uuid::Uuid;
 use shared::{config::load_config, db::connection, tracing::init_tracing};
 use worker::{db::queries, executor, heartbeat};
 
-async fn sleep(ms: u64) {
-    tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
-}
-
 #[instrument]
 #[tokio::main]
 async fn main() {
@@ -39,6 +35,6 @@ async fn main() {
             }
         }
 
-        sleep(10000).await;
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
 }
