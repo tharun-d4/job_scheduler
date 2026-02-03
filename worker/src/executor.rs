@@ -1,23 +1,28 @@
+use lettre::{Tokio1Executor, transport::smtp::AsyncSmtpTransport};
 use sqlx::{postgres::PgPool, types::JsonValue};
 use tracing::{error, info, instrument};
 
 use shared::db::models::Job;
 
-use crate::db::queries;
+use crate::{
+    db::queries,
+    handlers::{email, models::EmailInfo},
+};
 
-#[instrument(skip(pool))]
-pub async fn execute_job(pool: &PgPool, job: Job) {
+#[instrument(skip(pool, smtp_sender))]
+pub async fn execute_job(pool: &PgPool, job: Job, smtp_sender: AsyncSmtpTransport<Tokio1Executor>) {
     let job_id = job.id;
 
     let retry_limit_reached = job.max_retries == job.attempts.unwrap_or(0);
 
     let result = match job.job_type.as_ref() {
-        "send_email" => send_email(job).await,
+        "send_email" => send_email(smtp_sender, job).await,
         _ => Err("Unknown Job Type Found".to_string()),
     };
 
     match result {
         Ok(res) => {
+            info!("Marking job as completed");
             queries::mark_job_as_completed(pool, job_id, res)
                 .await
                 .unwrap();
@@ -26,13 +31,19 @@ pub async fn execute_job(pool: &PgPool, job: Job) {
             error!("Got error: {:?}", err);
             queries::store_job_error(pool, job_id, err).await.unwrap();
             if retry_limit_reached {
+                info!("Marking job as failed as the retry limit reached",);
                 queries::mark_job_as_failed(pool, job_id).await.unwrap();
             }
         }
     }
 }
 
-async fn send_email(_job: Job) -> Result<Option<JsonValue>, String> {
-    info!("Got a send_email job to do. Performing it ...");
+async fn send_email(
+    smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
+    job: Job,
+) -> Result<Option<JsonValue>, String> {
+    let email_info: EmailInfo = serde_json::from_value(job.payload).unwrap();
+    info!("Sending an email: {:?}", email_info);
+    email::send_email(smtp_sender, email_info).await;
     Ok(None)
 }
