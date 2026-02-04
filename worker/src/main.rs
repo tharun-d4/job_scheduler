@@ -22,7 +22,7 @@ async fn main() -> Result<(), WorkerError> {
 
     heartbeat::start_heartbeat_task(config.worker.heartbeat, worker_id, pool.clone()).await;
 
-    let smtp_sender = email::smtp_sender("127.0.0.1", 1025);
+    let smtp_sender = email::smtp_sender(&config.mail_server.host, config.mail_server.port);
     let client = reqwest::Client::new();
 
     loop {
