@@ -6,17 +6,23 @@ use shared::db::models::Job;
 
 use crate::{
     db::queries,
-    handlers::{email, models::EmailInfo},
+    handlers::{email, models::EmailInfo, webhook::send_webhook},
 };
 
 #[instrument(skip(pool, smtp_sender))]
-pub async fn execute_job(pool: &PgPool, job: Job, smtp_sender: AsyncSmtpTransport<Tokio1Executor>) {
+pub async fn execute_job(
+    pool: &PgPool,
+    job: Job,
+    smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
+    client: reqwest::Client,
+) {
     let job_id = job.id;
 
     let retry_limit_reached = job.max_retries == job.attempts.unwrap_or(0);
 
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job).await,
+        "send_webhook" => send_webhook(client, job.payload).await,
         _ => Err("Unknown Job Type Found".to_string()),
     };
 

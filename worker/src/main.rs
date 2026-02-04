@@ -25,12 +25,13 @@ async fn main() {
     heartbeat::start_heartbeat_task(config.worker.heartbeat, worker_id, pool.clone()).await;
 
     let smtp_sender = email::smtp_sender("127.0.0.1", 1025);
+    let client = reqwest::Client::new();
 
     loop {
         let claim_result = queries::claim_job(&pool, worker_id).await;
         match claim_result {
             Ok(job) => {
-                executor::execute_job(&pool, job, smtp_sender.clone()).await;
+                executor::execute_job(&pool, job, smtp_sender.clone(), client.clone()).await;
             }
             Err(err) => {
                 error!("Error occurred while fetching new job: {:?}", err);
