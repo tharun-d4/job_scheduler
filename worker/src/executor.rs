@@ -6,6 +6,7 @@ use shared::db::models::Job;
 
 use crate::{
     db::queries,
+    error::WorkerError,
     handlers::{email, models::EmailInfo, webhook::send_webhook},
 };
 
@@ -15,7 +16,7 @@ pub async fn execute_job(
     job: Job,
     smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
     client: reqwest::Client,
-) {
+) -> Result<(), WorkerError> {
     let job_id = job.id;
 
     let retry_limit_reached = job.max_retries == job.attempts.unwrap_or(0);
@@ -29,19 +30,19 @@ pub async fn execute_job(
     match result {
         Ok(res) => {
             info!("Marking job as completed");
-            queries::mark_job_as_completed(pool, job_id, res)
-                .await
-                .unwrap();
+            queries::mark_job_as_completed(pool, job_id, res).await?;
         }
         Err(err) => {
             error!("Got error: {:?}", err);
-            queries::store_job_error(pool, job_id, err).await.unwrap();
+            queries::store_job_error(pool, job_id, err).await?;
             if retry_limit_reached {
                 info!("Marking job as failed as the retry limit reached",);
-                queries::mark_job_as_failed(pool, job_id).await.unwrap();
+                queries::mark_job_as_failed(pool, job_id).await?;
             }
         }
     }
+
+    Ok(())
 }
 
 async fn send_email(
