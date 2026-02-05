@@ -24,7 +24,10 @@ pub async fn send_webhook(client: Client, payload: JsonValue) -> Result<Option<J
         .map_err(|e| format!("Webhook request failed: {:?}", e))?;
     info!("response: {:?}", response);
 
-    let response_json = response.json::<JsonValue>().await.unwrap();
+    let response_json = response
+        .json::<JsonValue>()
+        .await
+        .map_err(|e| format!("Webhook response to json convertion failed: {:?}", e))?;
     info!("response_json: {:?}", response_json);
 
     Ok(Some(response_json))
