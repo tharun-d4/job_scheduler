@@ -3,7 +3,7 @@ use lettre::{
     transport::smtp::AsyncSmtpTransport,
 };
 
-use crate::handlers::models::EmailInfo;
+use crate::{error::WorkerError, handlers::models::EmailInfo};
 
 pub fn smtp_sender(server: &str, port: u16) -> AsyncSmtpTransport<Tokio1Executor> {
     AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(server)
@@ -14,26 +14,16 @@ pub fn smtp_sender(server: &str, port: u16) -> AsyncSmtpTransport<Tokio1Executor
 pub async fn send_email(
     sender: AsyncSmtpTransport<Tokio1Executor>,
     info: EmailInfo,
-) -> Result<(), String> {
+) -> Result<(), WorkerError> {
     let message = Message::builder()
-        .from(
-            info.from
-                .parse()
-                .map_err(|e| format!("Couldn't parse from email: {:?}", e))?,
-        )
-        .to(info
-            .to
-            .parse()
-            .map_err(|e| format!("Couldn't parse to email: {:?}", e))?)
+        .from(info.from.parse()?)
+        .to(info.to.parse()?)
         .subject(&info.subject)
         .header(ContentType::TEXT_PLAIN)
         .body(info.body)
         .unwrap();
 
-    sender
-        .send(message)
-        .await
-        .map_err(|e| format!("Couldn't send email: {:?}", e))?;
+    sender.send(message).await?;
 
     Ok(())
 }
