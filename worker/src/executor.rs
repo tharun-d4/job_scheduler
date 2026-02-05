@@ -52,6 +52,6 @@ async fn send_email(
     let email_info: EmailInfo = serde_json::from_value(job.payload)
         .map_err(|e| format!("Invalid json job payload: {:?}", e))?;
     info!("Sending an email: {:?}", email_info);
-    email::send_email(smtp_sender, email_info).await;
+    email::send_email(smtp_sender, email_info).await?;
     Ok(None)
 }

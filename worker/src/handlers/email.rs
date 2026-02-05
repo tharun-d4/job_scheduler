@@ -11,14 +11,29 @@ pub fn smtp_sender(server: &str, port: u16) -> AsyncSmtpTransport<Tokio1Executor
         .build()
 }
 
-pub async fn send_email(sender: AsyncSmtpTransport<Tokio1Executor>, info: EmailInfo) {
+pub async fn send_email(
+    sender: AsyncSmtpTransport<Tokio1Executor>,
+    info: EmailInfo,
+) -> Result<(), String> {
     let message = Message::builder()
-        .from(info.from.parse().unwrap())
-        .to(info.to.parse().unwrap())
+        .from(
+            info.from
+                .parse()
+                .map_err(|e| format!("Couldn't parse from email: {:?}", e))?,
+        )
+        .to(info
+            .to
+            .parse()
+            .map_err(|e| format!("Couldn't parse to email: {:?}", e))?)
         .subject(&info.subject)
         .header(ContentType::TEXT_PLAIN)
         .body(info.body)
         .unwrap();
 
-    sender.send(message).await.unwrap();
+    sender
+        .send(message)
+        .await
+        .map_err(|e| format!("Couldn't send email: {:?}", e))?;
+
+    Ok(())
 }
