@@ -31,10 +31,10 @@ graph TD
 - Retry counter and max_retries enforcement
 - Failed jobs marked after exhausting retries
 - Observability (structured tracing/logs)
+- Dead letter queue table (failed jobs are moved from original jobs table)
 
 **🚧 TODO:**
 - [ ] Exponential backoff between retries
-- [ ] Dead letter queue table (failed jobs currently just marked `status='failed'`)
 - [ ] Worker crash detection and job timeout
 - [ ] Job query endpoints (GET /jobs/:id, GET /stats)
 - [ ] Graceful shutdown
