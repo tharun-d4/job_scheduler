@@ -11,7 +11,7 @@ pub enum JobStatus {
     Completed,
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, FromRow, Serialize, Deserialize)]
 pub struct Job {
     pub id: Uuid,
     pub job_type: String,

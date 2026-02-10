@@ -28,7 +28,7 @@ async fn claim_job_returns_job(pool: PgPool) {
 
 #[sqlx::test(
     migrations = "../migrations",
-    fixtures(path = "../../test_fixtures", scripts("jobs", "workers"))
+    fixtures(path = "../../test_fixtures", scripts("jobs"))
 )]
 async fn mark_job_as_completed(pool: PgPool) {
     let job_id = Uuid::parse_str("019bfadc-28bb-781d-9d22-acf23fe50117").unwrap();
@@ -44,14 +44,17 @@ async fn mark_job_as_completed(pool: PgPool) {
 
 #[sqlx::test(
     migrations = "../migrations",
-    fixtures(path = "../../test_fixtures", scripts("jobs", "workers"))
+    fixtures(path = "../../test_fixtures", scripts("invalid_jobs"))
 )]
-async fn mark_job_as_failed(pool: PgPool) {
-    let job_id = Uuid::parse_str("019bfdd5-cc70-7f37-a02a-1ec5849f25df").unwrap();
+async fn move_job_to_failed_jobs(pool: PgPool) {
+    let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
 
-    queries::mark_job_as_failed(&pool, job_id).await.unwrap();
+    let job = queries::claim_job(&pool, worker_id).await.unwrap();
+    queries::store_job_error(&pool, job.id, "Invalid job".to_string())
+        .await
+        .unwrap();
+    queries::move_to_failed_jobs(&pool, job.id).await.unwrap();
 
-    let job = get_job_by_id(&pool, job_id).await.unwrap();
-    assert_eq!(job.id, job_id);
-    assert_eq!(job.status, JobStatus::Failed);
+    let job_exists = get_job_by_id(&pool, job.id).await;
+    assert_eq!(job_exists, None);
 }
