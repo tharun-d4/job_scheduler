@@ -134,5 +134,19 @@ pub async fn move_to_failed_jobs(pool: &PgPool, job_id: Uuid) -> Result<(), sqlx
     .execute(pool)
     .await?;
 
+    delete_job(&pool, job_id).await?;
+
+    Ok(())
+}
+
+pub async fn delete_job(pool: &PgPool, job_id: Uuid) -> Result<(), sqlx::Error> {
+    query(
+        "DELETE FROM jobs
+        WHERE id = $1;",
+    )
+    .bind(job_id)
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
