@@ -22,6 +22,7 @@ pub async fn execute_job(
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job).await,
         "send_webhook" => send_webhook(client, job.payload).await,
+        "will_crash" => panic!("Worker will crash when running this job!"),
         _ => Err(WorkerError::InvalidJob),
     };
 
