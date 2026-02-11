@@ -5,12 +5,12 @@ use uuid::Uuid;
 use crate::db::queries::update_heartbeat;
 
 pub async fn start_heartbeat_task(
-    heartbeat: u64,
-    worker_id: Uuid,
     pool: PgPool,
+    worker_id: Uuid,
+    heartbeat: u8,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(heartbeat));
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(heartbeat as u64));
         loop {
             interval.tick().await;
 
