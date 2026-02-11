@@ -1,4 +1,4 @@
-use lettre::{transport::smtp::AsyncSmtpTransport, Tokio1Executor};
+use lettre::{Tokio1Executor, transport::smtp::AsyncSmtpTransport};
 use sqlx::{postgres::PgPool, types::JsonValue};
 use tracing::{error, info, instrument};
 
@@ -19,8 +19,6 @@ pub async fn execute_job(
 ) -> Result<(), WorkerError> {
     let job_id = job.id;
 
-    let retry_limit_reached = job.max_retries == job.attempts.unwrap_or(0);
-
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job).await,
         "send_webhook" => send_webhook(client, job.payload).await,
@@ -35,10 +33,6 @@ pub async fn execute_job(
         Err(err) => {
             error!("Got error: {:?}", err);
             queries::store_job_error(pool, job_id, err.to_string()).await?;
-            if retry_limit_reached {
-                info!("Marking job as failed as the retry limit reached",);
-                queries::move_to_failed_jobs(pool, job_id).await?;
-            }
         }
     }
 
