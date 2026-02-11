@@ -27,19 +27,19 @@ graph TD
 - Job submission via HTTP API
 - Concurrent worker execution
 - High priority jobs execute first
-- Job status tracking (pending → running → completed/failed)
+- Job status tracking (pending → running → completed)
 - Retry counter and max_retries enforcement
-- Failed jobs marked after exhausting retries
 - Observability (structured tracing/logs)
-- Dead letter queue table (failed jobs are moved from original jobs table)
+- Dead letter queue table (retry-exhausted jobs are moved from original jobs table to failed_jobs table)
+- Job leased to worker for lease duration
+- Job lease recovery once the lease expires to recover stalled jobs
+- Cleanup task to move retry-exhausted jobs to failed jobs
 
 **🚧 TODO:**
 - [ ] Exponential backoff between retries
-- [ ] Worker crash detection and job timeout
 - [ ] Job query endpoints (GET /jobs/:id, GET /stats)
+- [ ] Real-time dashboard to view workers, jobs & failed_jobs
 - [ ] Graceful shutdown
 - [ ] Worker pool management
 - [ ] Benchmarking & Profiling
 
-**Current behavior:**
-- Jobs stuck if worker crashes mid-execution
