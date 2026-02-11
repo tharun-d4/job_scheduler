@@ -4,6 +4,8 @@ use uuid::Uuid;
 use shared::db::{models::JobStatus, queries::get_job_by_id};
 use worker::db::queries;
 
+const JOB_LEASE_DURATION: u8 = 15;
+
 #[sqlx::test(migrations = "../migrations")]
 async fn register_worker(pool: PgPool) {
     let worker_id = Uuid::now_v7();
@@ -20,7 +22,9 @@ async fn register_worker(pool: PgPool) {
 )]
 async fn claim_job_returns_job(pool: PgPool) {
     let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
-    let job = queries::claim_job(&pool, worker_id).await.unwrap();
+    let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
+        .await
+        .unwrap();
 
     assert_eq!(job.status, JobStatus::Running);
     assert_eq!(job.worker_id, Some(worker_id));
@@ -46,15 +50,16 @@ async fn mark_job_as_completed(pool: PgPool) {
     migrations = "../migrations",
     fixtures(path = "../../test_fixtures", scripts("invalid_jobs"))
 )]
-async fn move_job_to_failed_jobs(pool: PgPool) {
+async fn store_job_error(pool: PgPool) {
     let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
 
-    let job = queries::claim_job(&pool, worker_id).await.unwrap();
+    let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
+        .await
+        .unwrap();
     queries::store_job_error(&pool, job.id, "Invalid job".to_string())
         .await
         .unwrap();
-    queries::move_to_failed_jobs(&pool, job.id).await.unwrap();
 
-    let job_exists = get_job_by_id(&pool, job.id).await;
-    assert_eq!(job_exists, None);
+    let job = get_job_by_id(&pool, job.id).await.unwrap();
+    assert_eq!(job.error_message, Some("Invalid job".to_string()));
 }
