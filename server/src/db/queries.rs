@@ -1,10 +1,11 @@
 use sqlx::{postgres::PgPool, query};
 
 pub async fn recover_unfinished_lease_expired_jobs(pool: &PgPool) -> Result<u64, sqlx::Error> {
-    let jobs_recovered = query(
+    let jobs_recovered = query!(
         "
         UPDATE jobs
-        SET status = 'pending'
+        SET status = 'pending',
+        error_message = 'lease expired or worker crashed'
         WHERE status = 'running'
         AND lease_expires_at < NOW()
         ",
