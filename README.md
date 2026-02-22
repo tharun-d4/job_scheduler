@@ -34,9 +34,9 @@ graph TD
 - Job leased to worker for lease duration
 - Job lease recovery once the lease expires to recover stalled jobs
 - Cleanup task to move retry-exhausted jobs to failed jobs
+- Exponential back-off between retries
 
 **🚧 TODO:**
-- [ ] Exponential backoff between retries
 - [ ] Job query endpoints (GET /jobs/:id, GET /stats)
 - [ ] Real-time dashboard to view workers, jobs & failed_jobs
 - [ ] Graceful shutdown
