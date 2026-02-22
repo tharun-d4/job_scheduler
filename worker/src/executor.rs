@@ -51,3 +51,22 @@ async fn send_email(
     email::send_email(smtp_sender, email_info).await?;
     Ok(None)
 }
+
+fn retry_backoff_secs(attempts: i16) -> i16 {
+    2_i16.pow(attempts as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::retry_backoff_secs;
+
+    #[test]
+    fn backoff_secs_with_4_attempts_returns_16() {
+        assert_eq!(retry_backoff_secs(4), 16);
+    }
+
+    #[test]
+    fn backoff_secs_with_10_attempts_returns_1024() {
+        assert_eq!(retry_backoff_secs(10), 1024);
+    }
+}
