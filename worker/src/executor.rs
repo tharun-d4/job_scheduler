@@ -19,6 +19,8 @@ pub async fn execute_job(
 ) -> Result<(), WorkerError> {
     let job_id = job.id;
 
+    let backoff_secs = retry_backoff_secs(job.attempts);
+
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job).await,
         "send_webhook" => send_webhook(client, job.payload).await,
@@ -32,8 +34,11 @@ pub async fn execute_job(
             queries::mark_job_as_completed(pool, job_id, res).await?;
         }
         Err(err) => {
-            error!("Got error: {:?}", err);
-            queries::store_job_error(pool, job_id, err.to_string()).await?;
+            error!(
+                "Got error: {:?} so Retry backoff will be: {} seconds",
+                err, backoff_secs
+            );
+            queries::store_job_error(pool, job_id, err.to_string(), backoff_secs).await?;
         }
     }
 

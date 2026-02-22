@@ -41,6 +41,7 @@ pub async fn claim_job(
             SELECT id FROM jobs
             WHERE status = $5
             AND attempts < max_retries
+            AND run_at < NOW()
             ORDER BY priority DESC, created_at ASC
             LIMIT 1
         )
@@ -82,16 +83,19 @@ pub async fn store_job_error(
     pool: &PgPool,
     job_id: Uuid,
     error: String,
+    backoff_secs: i16,
 ) -> Result<(), sqlx::Error> {
     query(
         "UPDATE jobs
         SET
             status = $1,
-            error_message = $2
-        WHERE id = $3;",
+            error_message = $2,
+            run_at = NOW() + ($3 * INTERVAL '1 SECONDS')
+        WHERE id = $4;",
     )
     .bind(JobStatus::Pending)
     .bind(error)
+    .bind(backoff_secs)
     .bind(job_id)
     .execute(pool)
     .await?;

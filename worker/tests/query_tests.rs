@@ -56,7 +56,7 @@ async fn store_job_error(pool: PgPool) {
     let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
         .unwrap();
-    queries::store_job_error(&pool, job.id, "Invalid job".to_string())
+    queries::store_job_error(&pool, job.id, "Invalid job".to_string(), 10)
         .await
         .unwrap();
 
