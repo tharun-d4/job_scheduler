@@ -20,11 +20,12 @@ pub struct Job {
     pub priority: i16,
     pub max_retries: i16,
     pub created_at: DateTime<Utc>,
+    pub run_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub lease_expires_at: Option<DateTime<Utc>>,
     pub worker_id: Option<Uuid>,
-    pub attempts: Option<i16>,
+    pub attempts: i16,
     pub error_message: Option<String>,
     pub result: Option<JsonValue>,
 }
