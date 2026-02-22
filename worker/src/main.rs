@@ -1,4 +1,4 @@
-use tracing::{error, info, instrument};
+use tracing::{info, instrument};
 use uuid::Uuid;
 
 use shared::{config::load_config, db::connection, tracing::init_tracing};
@@ -32,11 +32,10 @@ async fn main() -> Result<(), WorkerError> {
             Ok(job) => {
                 executor::execute_job(&pool, job, smtp_sender.clone(), client.clone()).await?;
             }
-            Err(err) => {
-                error!("Error occurred while fetching new job: {:?}", err);
+            Err(_) => {
+                // Job Not Found
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
             }
         }
-
-        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
 }
