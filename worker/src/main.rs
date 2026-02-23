@@ -1,3 +1,4 @@
+use tokio::signal::unix::{SignalKind, signal};
 use tracing::{info, instrument};
 use uuid::Uuid;
 
@@ -26,16 +27,32 @@ async fn main() -> Result<(), WorkerError> {
     let smtp_sender = email::smtp_sender(&config.mail_server.host, config.mail_server.port);
     let client = reqwest::Client::new();
 
+    let mut terminate_signal = signal(SignalKind::terminate()).unwrap();
+    let mut iterrupt_signal = signal(SignalKind::interrupt()).unwrap();
+
     loop {
-        let claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration).await;
-        match claim_result {
-            Ok(job) => {
-                executor::execute_job(&pool, job, smtp_sender.clone(), client.clone()).await?;
+        tokio::select! {
+            _ = terminate_signal.recv() => {
+                info!("Received Terminate Signal(SIGTERM). Worker shutting down.");
+                break;
             }
-            Err(_) => {
-                // Job Not Found
-                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+            _ = iterrupt_signal.recv() => {
+                info!("Received Interrupt Signal(SIGINT). Worker shutting down.");
+                break;
+            }
+            claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
+                match claim_result {
+                    Ok(job) => {
+                        executor::execute_job(&pool, job, smtp_sender.clone(), client.clone()).await?;
+                    }
+                    Err(_) => {
+                        // Job Not Found
+                        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                    }
+                }
             }
         }
     }
+
+    Ok(())
 }
