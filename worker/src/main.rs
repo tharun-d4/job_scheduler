@@ -54,5 +54,7 @@ async fn main() -> Result<(), WorkerError> {
         }
     }
 
+    queries::update_worker_shutdown_time(&pool, worker_id).await?;
+
     Ok(())
 }

@@ -102,3 +102,19 @@ pub async fn store_job_error(
 
     Ok(())
 }
+
+pub async fn update_worker_shutdown_time(
+    pool: &PgPool,
+    worker_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    query(
+        "UPDATE workers
+        SET shutdown_at = NOW()
+        WHERE id = $1;",
+    )
+    .bind(worker_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
