@@ -18,7 +18,7 @@ async fn main() -> Result<(), WorkerError> {
 
     queries::register(&pool, worker_id, pid as i32).await?;
     info!(
-        "[+] Worker (ID: {:?}, PID: {}) has started running & registered itself",
+        "Worker (ID: {:?}, PID: {}) has started running & registered itself",
         worker_id, pid
     );
 
@@ -33,11 +33,11 @@ async fn main() -> Result<(), WorkerError> {
     loop {
         tokio::select! {
             _ = terminate_signal.recv() => {
-                info!("Received Terminate Signal(SIGTERM). Worker shutting down.");
+                info!("Received Terminate Signal(SIGTERM)");
                 break;
             }
             _ = iterrupt_signal.recv() => {
-                info!("Received Interrupt Signal(SIGINT). Worker shutting down.");
+                info!("Received Interrupt Signal(SIGINT)");
                 break;
             }
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
@@ -53,7 +53,7 @@ async fn main() -> Result<(), WorkerError> {
             }
         }
     }
-
+    info!("Worker (ID: {:?}, PID: {}) shutting down", worker_id, pid);
     queries::update_worker_shutdown_time(&pool, worker_id).await?;
 
     Ok(())
