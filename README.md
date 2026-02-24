@@ -38,8 +38,8 @@ graph TD
 - Worker graceful shutdown
 
 **🚧 TODO:**
+- [ ] Worker process supervision with crash restart
 - [ ] Job query endpoints (GET /jobs/:id, GET /stats)
 - [ ] Real-time dashboard to view workers, jobs & failed_jobs
-- [ ] Worker pool management
 - [ ] Benchmarking & Profiling
 
