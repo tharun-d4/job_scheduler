@@ -2,14 +2,15 @@ use tokio::signal::unix::{SignalKind, signal};
 use tracing::{error, info, instrument};
 use uuid::Uuid;
 
-use shared::{config::load_config, db::connection, tracing::init_tracing};
+use shared::{config::load_worker_config, db::connection, tracing::init_tracing};
 use worker::{db::queries, error::WorkerError, executor, handlers::email, heartbeat};
 
 #[instrument]
 #[tokio::main]
 async fn main() -> Result<(), WorkerError> {
     let _trace_guard = init_tracing("worker");
-    let config = load_config("./config").expect("Config Error");
+    let config = load_worker_config("./config").expect("Config Error");
+
     let pool = connection::create_pool(&config.database).await?;
     connection::run_migrations(&pool).await?;
 

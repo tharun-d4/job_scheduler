@@ -1,13 +1,13 @@
 use tracing::{info, instrument};
 
 use server::{app, cleanup, error, lease_recovery, state};
-use shared::{config::load_config, db::connection, tracing::init_tracing};
+use shared::{config::load_server_config, db::connection, tracing::init_tracing};
 
 #[instrument]
 #[tokio::main]
 async fn main() -> Result<(), error::ServerError> {
     let _trace_guard = init_tracing("server");
-    let config = load_config("./config").expect("Config Error");
+    let config = load_server_config("./config").expect("Config Error");
 
     let pool = connection::create_pool(&config.database).await?;
     connection::run_migrations(&pool).await?;

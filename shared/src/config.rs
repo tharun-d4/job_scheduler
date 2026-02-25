@@ -28,14 +28,27 @@ pub struct MailServer {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AppConfig {
+pub struct ServerConfig {
     pub database: Database,
     pub server: Server,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorkerConfig {
+    pub database: Database,
     pub worker: Worker,
     pub mail_server: MailServer,
 }
 
-pub fn load_config(path: &str) -> Result<AppConfig, ConfigError> {
+pub fn load_server_config(path: &str) -> Result<ServerConfig, ConfigError> {
+    let config = Config::builder()
+        .add_source(File::new(path, FileFormat::Yaml))
+        .build()?
+        .try_deserialize()?;
+
+    Ok(config)
+}
+pub fn load_worker_config(path: &str) -> Result<WorkerConfig, ConfigError> {
     let config = Config::builder()
         .add_source(File::new(path, FileFormat::Yaml))
         .build()?
