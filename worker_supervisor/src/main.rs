@@ -1,5 +1,7 @@
 use std::process::{Child, Command};
 
+use shared::config::load_supervisor_config;
+
 fn spawn_worker() -> Child {
     let child = Command::new("./target/debug/worker")
         .spawn()
@@ -9,10 +11,10 @@ fn spawn_worker() -> Child {
 }
 
 fn main() {
-    const WORKERS: u8 = 2;
+    let config = load_supervisor_config("./config").expect("Config Error");
 
     let mut workers = Vec::new();
-    for _ in 0..WORKERS {
+    for _ in 0..config.workers {
         workers.push(spawn_worker());
     }
 
@@ -24,6 +26,6 @@ fn main() {
                 *worker = spawn_worker();
             }
         }
-        std::thread::sleep(std::time::Duration::from_secs(5));
+        std::thread::sleep(std::time::Duration::from_secs(config.poll_interval as u64));
     }
 }

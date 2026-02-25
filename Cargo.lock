@@ -3816,6 +3816,9 @@ dependencies = [
 [[package]]
 name = "worker_supervisor"
 version = "0.1.0"
+dependencies = [
+ "shared",
+]
 
 [[package]]
 name = "writeable"
