@@ -32,16 +32,32 @@ pub async fn execute_job(
 
     match result {
         Ok(res) => {
-            info!("Marking job as completed");
-            queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
+            let updated_rows = queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
+            if updated_rows == 1 {
+                info!("Job marked as completed");
+            } else {
+                error!(
+                    updated_rows = updated_rows,
+                    "Failed to mark job as completed"
+                );
+            }
         }
         Err(err) => {
             error!(
-                "Got error: {:?} so Retry backoff will be: {} seconds",
-                err, backoff_secs
+                error = ?err,
+                retry_backoff_time_in_secs = backoff_secs
             );
-            queries::store_job_error(pool, job_id, worker_id, err.to_string(), backoff_secs)
-                .await?;
+            let updated_rows =
+                queries::store_job_error(pool, job_id, worker_id, err.to_string(), backoff_secs)
+                    .await?;
+            if updated_rows == 1 {
+                info!("Updated job error and retry backoff time");
+            } else {
+                error!(
+                    updated_rows = updated_rows,
+                    "Failed to update job error and retry time"
+                );
+            }
         }
     }
 

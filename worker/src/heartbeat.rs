@@ -14,10 +14,15 @@ pub async fn start_heartbeat_task(
         loop {
             interval.tick().await;
 
-            if let Err(e) = update_heartbeat(&pool, worker_id).await {
-                error!(worker_id = %worker_id, error = %e, "Heartbeat failed");
-            } else {
-                info!(worker_id = %worker_id, "Heartbeat sent");
+            match update_heartbeat(&pool, worker_id).await {
+                Ok(updated) => {
+                    if updated == 1 {
+                        info!(worker_id = %worker_id, "Heartbeat sent");
+                    } else {
+                        error!(worker_id = %worker_id, "Heartbeat update failed");
+                    }
+                }
+                Err(e) => error!(worker_id = %worker_id, error = ?e, "Heartbeat failed"),
             }
         }
     })
