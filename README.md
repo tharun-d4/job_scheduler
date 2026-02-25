@@ -36,9 +36,9 @@ graph TD
 - Cleanup task to move retry-exhausted jobs to failed jobs
 - Exponential back-off between retries
 - Worker graceful shutdown
+- Worker process supervision with crash restart
 
 **🚧 TODO:**
-- [ ] Worker process supervision with crash restart
 - [ ] Job query endpoints (GET /jobs/:id, GET /stats)
 - [ ] Real-time dashboard to view workers, jobs & failed_jobs
 - [ ] Benchmarking & Profiling
