@@ -1,5 +1,5 @@
 use tokio::signal::unix::{SignalKind, signal};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 use uuid::Uuid;
 
 use shared::{config::load_config, db::connection, tracing::init_tracing};
@@ -42,13 +42,14 @@ async fn main() -> Result<(), WorkerError> {
             }
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
                 match claim_result {
-                    Ok(job) => {
+                    Ok(Some(job)) => {
                         executor::execute_job(&pool, job, worker_id, smtp_sender.clone(), client.clone()).await?;
                     }
-                    Err(_) => {
-                        // Job Not Found
+                    Ok(None) => {
+                        // No job to run
                         tokio::time::sleep(std::time::Duration::from_millis(250)).await;
                     }
+                    Err(err) => error!(error = ?err, "Claim job error"),
                 }
             }
         }

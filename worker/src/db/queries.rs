@@ -32,31 +32,37 @@ pub async fn claim_job(
     pool: &PgPool,
     worker_id: Uuid,
     lease_duration: u8,
-) -> Result<Job, sqlx::Error> {
+) -> Result<Option<Job>, sqlx::Error> {
     query_as::<_, Job>(
-        "UPDATE jobs
-        SET
-            status = $1,
-            worker_id = $2,
-            started_at = $3,
-            lease_expires_at = $4,
-            attempts = attempts + 1
-        WHERE id = (
-            SELECT id FROM jobs
-            WHERE status = $5
-            AND attempts < max_retries
-            AND run_at < NOW()
+        "
+        WITH pending_job AS (
+            SELECT id
+            FROM jobs
+            WHERE status = $1
+                AND attempts < max_retries
+                AND run_at < NOW()
             ORDER BY priority DESC, created_at ASC
+            FOR UPDATE SKIP LOCKED
             LIMIT 1
         )
-        RETURNING *",
+        UPDATE jobs
+        SET
+            status = $2,
+            worker_id = $3,
+            started_at = $4,
+            lease_expires_at = $5,
+            attempts = attempts + 1
+        FROM pending_job
+        WHERE jobs.id = pending_job.id
+        RETURNING jobs.*;
+        ",
     )
+    .bind(JobStatus::Pending)
     .bind(JobStatus::Running)
     .bind(worker_id)
     .bind(Utc::now())
     .bind(Utc::now() + TimeDelta::seconds(lease_duration as i64))
-    .bind(JobStatus::Pending)
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await
 }
 
