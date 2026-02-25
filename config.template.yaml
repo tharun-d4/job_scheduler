@@ -12,6 +12,10 @@ worker:
   heartbeat: 10
   lease_duration: 15
 
+supervisor:
+  workers: 5
+  poll_interval: 5
+
 mail_server:
   host: "127.0.0.1"
   port: 1025
