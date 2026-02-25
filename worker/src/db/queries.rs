@@ -59,6 +59,7 @@ pub async fn claim_job(
 pub async fn mark_job_as_completed(
     pool: &PgPool,
     job_id: Uuid,
+    worker_id: Uuid,
     result: Option<JsonValue>,
 ) -> Result<(), sqlx::Error> {
     query(
@@ -67,12 +68,16 @@ pub async fn mark_job_as_completed(
             status = $1,
             completed_at = $2,
             result = $3
-        WHERE id = $4;",
+        WHERE id = $4
+        AND worker_id = $5
+        AND status = $6;",
     )
     .bind(JobStatus::Completed)
     .bind(Utc::now())
     .bind(result)
     .bind(job_id)
+    .bind(worker_id)
+    .bind(JobStatus::Running)
     .execute(pool)
     .await?;
 
@@ -82,6 +87,7 @@ pub async fn mark_job_as_completed(
 pub async fn store_job_error(
     pool: &PgPool,
     job_id: Uuid,
+    worker_id: Uuid,
     error: String,
     backoff_secs: i16,
 ) -> Result<(), sqlx::Error> {
@@ -91,12 +97,14 @@ pub async fn store_job_error(
             status = $1,
             error_message = $2,
             run_at = NOW() + ($3 * INTERVAL '1 SECONDS')
-        WHERE id = $4;",
+        WHERE id = $4
+        AND worker_id = $5;",
     )
     .bind(JobStatus::Pending)
     .bind(error)
     .bind(backoff_secs)
     .bind(job_id)
+    .bind(worker_id)
     .execute(pool)
     .await?;
 

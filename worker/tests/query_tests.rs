@@ -35,14 +35,16 @@ async fn claim_job_returns_job(pool: PgPool) {
     fixtures(path = "../../test_fixtures", scripts("jobs"))
 )]
 async fn mark_job_as_completed(pool: PgPool) {
-    let job_id = Uuid::parse_str("019bfadc-28bb-781d-9d22-acf23fe50117").unwrap();
-
-    queries::mark_job_as_completed(&pool, job_id, None)
+    let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
+    let claimed_job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
+        .await
+        .unwrap();
+    queries::mark_job_as_completed(&pool, claimed_job.id, worker_id, None)
         .await
         .unwrap();
 
-    let job = get_job_by_id(&pool, job_id).await.unwrap();
-    assert_eq!(job.id, job_id);
+    let job = get_job_by_id(&pool, claimed_job.id).await.unwrap();
+    assert_eq!(claimed_job.id, job.id);
     assert_eq!(job.status, JobStatus::Completed);
 }
 
@@ -56,7 +58,7 @@ async fn store_job_error(pool: PgPool) {
     let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
         .unwrap();
-    queries::store_job_error(&pool, job.id, "Invalid job".to_string(), 10)
+    queries::store_job_error(&pool, job.id, worker_id, "Invalid job".to_string(), 10)
         .await
         .unwrap();
 

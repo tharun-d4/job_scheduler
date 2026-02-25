@@ -43,7 +43,7 @@ async fn main() -> Result<(), WorkerError> {
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
                 match claim_result {
                     Ok(job) => {
-                        executor::execute_job(&pool, job, smtp_sender.clone(), client.clone()).await?;
+                        executor::execute_job(&pool, job, worker_id, smtp_sender.clone(), client.clone()).await?;
                     }
                     Err(_) => {
                         // Job Not Found

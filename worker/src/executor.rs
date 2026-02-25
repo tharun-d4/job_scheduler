@@ -1,6 +1,7 @@
 use lettre::{Tokio1Executor, transport::smtp::AsyncSmtpTransport};
 use sqlx::{postgres::PgPool, types::JsonValue};
 use tracing::{error, info, instrument};
+use uuid::Uuid;
 
 use shared::db::models::Job;
 
@@ -14,6 +15,7 @@ use crate::{
 pub async fn execute_job(
     pool: &PgPool,
     job: Job,
+    worker_id: Uuid,
     smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
     client: reqwest::Client,
 ) -> Result<(), WorkerError> {
@@ -31,14 +33,15 @@ pub async fn execute_job(
     match result {
         Ok(res) => {
             info!("Marking job as completed");
-            queries::mark_job_as_completed(pool, job_id, res).await?;
+            queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
         }
         Err(err) => {
             error!(
                 "Got error: {:?} so Retry backoff will be: {} seconds",
                 err, backoff_secs
             );
-            queries::store_job_error(pool, job_id, err.to_string(), backoff_secs).await?;
+            queries::store_job_error(pool, job_id, worker_id, err.to_string(), backoff_secs)
+                .await?;
         }
     }
 
