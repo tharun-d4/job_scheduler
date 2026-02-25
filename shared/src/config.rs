@@ -40,6 +40,17 @@ pub struct WorkerConfig {
     pub mail_server: MailServer,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Supervisor {
+    pub workers: u8,
+    pub poll_interval: u8,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SupervisorConfig {
+    pub supervisor: Supervisor,
+}
+
 pub fn load_server_config(path: &str) -> Result<ServerConfig, ConfigError> {
     let config = Config::builder()
         .add_source(File::new(path, FileFormat::Yaml))
@@ -48,6 +59,7 @@ pub fn load_server_config(path: &str) -> Result<ServerConfig, ConfigError> {
 
     Ok(config)
 }
+
 pub fn load_worker_config(path: &str) -> Result<WorkerConfig, ConfigError> {
     let config = Config::builder()
         .add_source(File::new(path, FileFormat::Yaml))
@@ -55,4 +67,13 @@ pub fn load_worker_config(path: &str) -> Result<WorkerConfig, ConfigError> {
         .try_deserialize()?;
 
     Ok(config)
+}
+
+pub fn load_supervisor_config(path: &str) -> Result<Supervisor, ConfigError> {
+    let config: SupervisorConfig = Config::builder()
+        .add_source(File::new(path, FileFormat::Yaml))
+        .build()?
+        .try_deserialize()?;
+
+    Ok(config.supervisor)
 }
