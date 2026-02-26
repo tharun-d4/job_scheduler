@@ -39,7 +39,9 @@ graph TD
 - Worker process supervision with crash restart
 
 **🚧 TODO:**
-- [ ] Job query endpoints (GET /jobs/:id, GET /stats)
-- [ ] Real-time dashboard to view workers, jobs & failed_jobs
-- [ ] Benchmarking & Profiling
+- Scheduled jobs
+- Periodic/Recurring jobs
+- Job query endpoints (GET /jobs/:id, GET /stats)
+- Real-time dashboard to view workers, jobs & failed_jobs
+- Benchmarking & Profiling
 
