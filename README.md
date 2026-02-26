@@ -1,5 +1,5 @@
 # Job Scheduler
-A job scheduler system built in Rust for reliable background job processing.
+A job scheduler system written in Rust for reliable background job processing with prioritization, retries, observability, lease-based execution, and process supervision.
 
 ## Architecture
 ```mermaid
@@ -16,32 +16,28 @@ graph TD
     G --> C
     H --> C
 ```
+## Features
+### Implemented
+- **📥 Job Submission API:** Submit Jobs via HTTP
+- **💾 Durable job persistance:** Jobs are stored in database
+- **⚡  Concurrent Workers:** Workers process jobs in parallel
+- **🔼 Priority Scheduling:** High priority jobs are preferred
+- **🔁 Retries & Backoff:** Exponential backoff for retrying jobs
+- **🔐 Job Leasing:** Jobs are leased so stalled jobs can be reclaimed
+- **🧹 Cleanup Task:** Moves failed jobs out of the primary queue
+- **💀 Dead Letter Queue:** Persistent store for retry-exhausted jobs
+- **🚪 Graceful Worker Shutdown:** Workers stop accepting new jobs and if in mid-execution, complete the current job until it reaches a terminal status (completed/failed) before shutting down
+- **🧠 Worker Process Supervision:** A separate supervisor process spawns workers based on configuration, continuously monitors their exit status, and automatically respawns them if they crash.
+
+### Planned Enhancements
+- 🗓️ Scheduled jobs (One-time)
+- 🔁 Periodic / Recurring jobs
+- 📊 API to query job status & statistics
+- 🖥️ Dashboard for real-time visualization
+- 📈 Benchmarking & performance profiling
 
 ## Technologies
 - **Server:** Rust (tokio, axum)
 - **Worker:** Rust (tokio)
 - **Database:** PostgreSQL (sqlx)
-
-## Current Implementation Status
-**✅ Implemented:**
-- Job submission via HTTP API
-- Concurrent worker execution
-- High priority jobs execute first
-- Job status tracking (pending → running → completed)
-- Retry counter and max_retries enforcement
-- Observability (structured tracing/logs)
-- Dead letter queue table (retry-exhausted jobs are moved from original jobs table to failed_jobs table)
-- Job leased to worker for lease duration
-- Job lease recovery once the lease expires to recover stalled jobs
-- Cleanup task to move retry-exhausted jobs to failed jobs
-- Exponential back-off between retries
-- Worker graceful shutdown
-- Worker process supervision with crash restart
-
-**🚧 TODO:**
-- Scheduled jobs
-- Periodic/Recurring jobs
-- Job query endpoints (GET /jobs/:id, GET /stats)
-- Real-time dashboard to view workers, jobs & failed_jobs
-- Benchmarking & Profiling
 
