@@ -26,7 +26,16 @@ pub async fn execute_job(
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job).await,
         "send_webhook" => send_webhook(client, job.payload).await,
-        "will_crash" => panic!("Worker will crash when running this job!"),
+        "will_crash" => {
+            error!("Worker will crash when running this job");
+            panic!("Worker crashed when running this job");
+        }
+        "long_running_job" => {
+            info!("This is a long running job");
+            // blocking sleep - mocking synchronous work
+            std::thread::sleep(std::time::Duration::from_secs(10));
+            Ok(None)
+        }
         _ => Err(WorkerError::InvalidJob),
     };
 
