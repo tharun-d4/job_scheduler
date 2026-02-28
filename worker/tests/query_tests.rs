@@ -24,6 +24,7 @@ async fn claim_job_returns_job(pool: PgPool) {
     let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
     let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
+        .unwrap()
         .unwrap();
 
     assert_eq!(job.status, JobStatus::Running);
@@ -38,6 +39,7 @@ async fn mark_job_as_completed(pool: PgPool) {
     let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
     let claimed_job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
+        .unwrap()
         .unwrap();
     queries::mark_job_as_completed(&pool, claimed_job.id, worker_id, None)
         .await
@@ -57,6 +59,7 @@ async fn store_job_error(pool: PgPool) {
 
     let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
+        .unwrap()
         .unwrap();
     queries::store_job_error(&pool, job.id, worker_id, "Invalid job".to_string(), 10)
         .await
