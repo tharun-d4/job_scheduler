@@ -66,34 +66,34 @@ pub async fn claim_job(
     .await
 }
 
-pub async fn mark_job_as_completed(
-    pool: &PgPool,
-    job_id: Uuid,
-    worker_id: Uuid,
-    result: Option<JsonValue>,
-) -> Result<u64, sqlx::Error> {
-    let updated_rows = query(
-        "UPDATE jobs
-        SET
-            status = $1,
-            completed_at = $2,
-            result = $3
-        WHERE id = $4
-        AND worker_id = $5
-        AND status = $6;",
-    )
-    .bind(JobStatus::Completed)
-    .bind(Utc::now())
-    .bind(result)
-    .bind(job_id)
-    .bind(worker_id)
-    .bind(JobStatus::Running)
-    .execute(pool)
-    .await?
-    .rows_affected();
-
-    Ok(updated_rows)
-}
+//pub async fn mark_job_as_completed(
+//    pool: &PgPool,
+//    job_id: Uuid,
+//    worker_id: Uuid,
+//    result: Option<JsonValue>,
+//) -> Result<u64, sqlx::Error> {
+//    let updated_rows = query(
+//        "UPDATE jobs
+//        SET
+//            status = $1,
+//            completed_at = $2,
+//            result = $3
+//        WHERE id = $4
+//        AND worker_id = $5
+//        AND status = $6;",
+//    )
+//    .bind(JobStatus::Completed)
+//    .bind(Utc::now())
+//    .bind(result)
+//    .bind(job_id)
+//    .bind(worker_id)
+//    .bind(JobStatus::Running)
+//    .execute(pool)
+//    .await?
+//    .rows_affected();
+//
+//    Ok(updated_rows)
+//}
 
 pub async fn move_job_record_to_completed(
     pool: &PgPool,
