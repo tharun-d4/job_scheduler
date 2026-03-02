@@ -38,4 +38,5 @@ pub struct NewJob {
     pub priority: i16,
     pub max_retries: i16,
     pub created_at: DateTime<Utc>,
+    pub run_at: DateTime<Utc>,
 }

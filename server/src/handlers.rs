@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use tracing::{info, instrument};
@@ -23,6 +23,7 @@ pub struct JobPayload {
     payload: JsonValue,
     priority: Option<i16>,
     max_retries: Option<i16>,
+    schedule_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,17 +34,18 @@ pub struct JobId {
 #[instrument(skip(state))]
 pub async fn create_job(
     State(state): State<Arc<AppState>>,
-    Json(req_payload): Json<JobPayload>,
+    Json(job_payload): Json<JobPayload>,
 ) -> Result<(StatusCode, Json<JobId>), ServerError> {
     let job_id = insert_job(
         &state.pool,
         NewJob {
-            job_type: req_payload.job_type,
-            payload: req_payload.payload,
+            job_type: job_payload.job_type,
+            payload: job_payload.payload,
             status: JobStatus::Pending,
-            priority: req_payload.priority.unwrap_or(1),
-            max_retries: req_payload.max_retries.unwrap_or(1),
+            priority: job_payload.priority.unwrap_or(1),
+            max_retries: job_payload.max_retries.unwrap_or(1),
             created_at: Utc::now(),
+            run_at: job_payload.schedule_at.unwrap_or(Utc::now()),
         },
     )
     .await?;

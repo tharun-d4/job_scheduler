@@ -6,8 +6,8 @@ use crate::db::models::{Job, NewJob};
 pub async fn insert_job(pool: &PgPool, job: NewJob) -> Result<Uuid, sqlx::Error> {
     let job_id = query_scalar(
         "INSERT INTO jobs
-        (id, job_type, payload, status, priority, max_retries, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (id, job_type, payload, status, priority, max_retries, created_at, run_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id",
     )
     .bind(Uuid::now_v7())
@@ -17,6 +17,7 @@ pub async fn insert_job(pool: &PgPool, job: NewJob) -> Result<Uuid, sqlx::Error>
     .bind(job.priority)
     .bind(job.max_retries)
     .bind(job.created_at)
+    .bind(job.run_at)
     .fetch_one(pool)
     .await?;
 
