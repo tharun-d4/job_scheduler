@@ -28,6 +28,7 @@ graph TD
 - **💀 Dead Letter Queue:** Persistent store for retry-exhausted jobs
 - **🚪 Graceful Worker Shutdown:** Workers stop accepting new jobs and if in mid-execution, complete the current job until it reaches a terminal status (completed/failed) before shutting down
 - **🧠 Worker Process Supervision:** A separate supervisor process spawns workers based on configuration, continuously monitors their exit status, and automatically respawns them if they crash.
+- 🗂️ Strict Job State Separation: Non-terminal jobs (pending, running) reside in the hot jobs table, successfully completed jobs are atomically moved to completed_jobs, and retry-exhausted jobs are moved to failed_jobs.
 - 🗓️ Scheduled jobs (One-time)
 
 ### Planned Enhancements
