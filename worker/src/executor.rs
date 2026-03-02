@@ -41,7 +41,8 @@ pub async fn execute_job(
 
     match result {
         Ok(res) => {
-            let updated_rows = queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
+            let updated_rows =
+                queries::move_job_record_to_completed(pool, job_id, worker_id, res).await?;
             if updated_rows == 1 {
                 info!("Job marked as completed");
             } else {

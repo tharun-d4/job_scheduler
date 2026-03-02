@@ -95,6 +95,69 @@ pub async fn mark_job_as_completed(
     Ok(updated_rows)
 }
 
+pub async fn move_job_record_to_completed(
+    pool: &PgPool,
+    job_id: Uuid,
+    worker_id: Uuid,
+    result: Option<JsonValue>,
+) -> Result<u64, sqlx::Error> {
+    let rows_affected = query(
+        "
+        WITH completed AS (
+            DELETE FROM jobs
+            WHERE id = $1
+            AND worker_id = $2
+            AND status = $3
+            RETURNING
+                id,
+                job_type,
+                payload,
+                priority,
+                max_retries,
+                created_at,
+                run_at,
+                started_at,
+                worker_id,
+                lease_expires_at,
+                attempts,
+                error_message
+        )
+        INSERT INTO completed_jobs
+        (
+            id,
+            job_type,
+            payload,
+            priority,
+            max_retries,
+            created_at,
+            run_at,
+            started_at,
+            worker_id,
+            lease_expires_at,
+            attempts,
+            error_message,
+            completed_at,
+            result
+        )
+        SELECT
+            *,
+            $4,
+            $5
+        FROM completed;
+        ",
+    )
+    .bind(job_id)
+    .bind(worker_id)
+    .bind(JobStatus::Running)
+    .bind(Utc::now())
+    .bind(result)
+    .execute(pool)
+    .await?
+    .rows_affected();
+
+    Ok(rows_affected)
+}
+
 pub async fn store_job_error(
     pool: &PgPool,
     job_id: Uuid,
