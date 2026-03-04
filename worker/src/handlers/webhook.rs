@@ -9,7 +9,7 @@ pub async fn send_webhook(
     payload: JsonValue,
 ) -> Result<Option<JsonValue>, WorkerError> {
     let Some(url) = payload["url"].as_str() else {
-        return Err(WorkerError::Webhook("Invalid url".to_string()));
+        return Err(WorkerError::permanent("Invalid url"));
     };
     let method = payload["method"].as_str().unwrap_or("POST");
     let body = payload["body"].clone();
@@ -18,17 +18,22 @@ pub async fn send_webhook(
         "POST" => client.post(url),
         "PUT" => client.put(url),
         "PATCH" => client.patch(url),
-        _ => return Err(WorkerError::Webhook("Invalid method".to_string())),
+        _ => return Err(WorkerError::permanent("Invalid method")),
     };
 
     let response = request
         .json(&body)
         .timeout(std::time::Duration::from_secs(30))
         .send()
-        .await?;
+        .await
+        .map_err(|e| WorkerError::permanent("Failed to send webhook request").set_source(e))?;
+
     info!("response: {:?}", response);
 
-    let response_json = response.json::<JsonValue>().await?;
+    let response_json = response.json::<JsonValue>().await.map_err(|e| {
+        WorkerError::permanent("Failed to deserialize webhook response").set_source(e)
+    })?;
+
     info!("response_json: {:?}", response_json);
 
     Ok(Some(response_json))

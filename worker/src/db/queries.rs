@@ -2,37 +2,50 @@ use chrono::{TimeDelta, Utc};
 use sqlx::{postgres::PgPool, query, query_as, types::JsonValue};
 use uuid::Uuid;
 
+use crate::error::WorkerError;
 use shared::db::models::{Job, JobStatus};
 
-pub async fn register(pool: &PgPool, worker_id: Uuid, pid: i32) -> Result<u64, sqlx::Error> {
-    let inserted_rows =
-        query("INSERT INTO workers (id, pid, started_at, last_heartbeat) VALUES ($1, $2, $3, $3);")
-            .bind(worker_id)
-            .bind(pid)
-            .bind(Utc::now())
-            .execute(pool)
-            .await?
-            .rows_affected();
+pub async fn register(pool: &PgPool, worker_id: Uuid, pid: i32) -> Result<(), WorkerError> {
+    query(
+        "
+        INSERT INTO workers
+        (id, pid, started_at, last_heartbeat)
+        VALUES ($1, $2, $3, $3);
+        ",
+    )
+    .bind(worker_id)
+    .bind(pid)
+    .bind(Utc::now())
+    .execute(pool)
+    .await
+    .map_err(|e| WorkerError::temporary("Failed to register worker").set_source(e))?;
 
-    Ok(inserted_rows)
+    Ok(())
 }
 
-pub async fn update_heartbeat(pool: &PgPool, worker_id: Uuid) -> Result<u64, sqlx::Error> {
-    let updated_rows = query("UPDATE workers SET last_heartbeat=$2 WHERE id=$1;")
-        .bind(worker_id)
-        .bind(Utc::now())
-        .execute(pool)
-        .await?
-        .rows_affected();
+pub async fn update_heartbeat(pool: &PgPool, worker_id: Uuid) -> Result<u64, WorkerError> {
+    let rows_affected = query(
+        "
+        UPDATE workers
+        SET last_heartbeat=$2
+        WHERE id=$1;
+        ",
+    )
+    .bind(worker_id)
+    .bind(Utc::now())
+    .execute(pool)
+    .await
+    .map_err(|e| WorkerError::temporary("Failed to update worker heartbeat").set_source(e))?
+    .rows_affected();
 
-    Ok(updated_rows)
+    Ok(rows_affected)
 }
 
 pub async fn claim_job(
     pool: &PgPool,
     worker_id: Uuid,
     lease_duration: u8,
-) -> Result<Option<Job>, sqlx::Error> {
+) -> Result<Option<Job>, WorkerError> {
     query_as::<_, Job>(
         "
         WITH pending_job AS (
@@ -64,6 +77,7 @@ pub async fn claim_job(
     .bind(Utc::now() + TimeDelta::seconds(lease_duration as i64))
     .fetch_optional(pool)
     .await
+    .map_err(|e| WorkerError::temporary("Failed to claim a job").set_source(e))
 }
 
 //pub async fn mark_job_as_completed(
@@ -100,7 +114,7 @@ pub async fn move_job_record_to_completed(
     job_id: Uuid,
     worker_id: Uuid,
     result: Option<JsonValue>,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, WorkerError> {
     let rows_affected = query(
         "
         WITH completed AS (
@@ -152,7 +166,10 @@ pub async fn move_job_record_to_completed(
     .bind(Utc::now())
     .bind(result)
     .execute(pool)
-    .await?
+    .await
+    .map_err(|e| {
+        WorkerError::temporary("Unable to move the job to completed table").set_source(e)
+    })?
     .rows_affected();
 
     Ok(rows_affected)
@@ -162,7 +179,7 @@ pub async fn move_job_record_to_failed(
     pool: &PgPool,
     job_id: Uuid,
     worker_id: Uuid,
-) -> Result<u64, sqlx::Error> {
+) -> Result<u64, WorkerError> {
     let moved_rows = query(
         "
         WITH deleted_job AS (
@@ -191,7 +208,8 @@ pub async fn move_job_record_to_failed(
     .bind(job_id)
     .bind(worker_id)
     .execute(pool)
-    .await?
+    .await
+    .map_err(|e| WorkerError::temporary("Unable to move the job to failed table").set_source(e))?
     .rows_affected();
 
     Ok(moved_rows)
@@ -203,15 +221,17 @@ pub async fn store_job_error(
     worker_id: Uuid,
     error: String,
     backoff_secs: i16,
-) -> Result<u64, sqlx::Error> {
-    let updated_rows = query(
-        "UPDATE jobs
+) -> Result<u64, WorkerError> {
+    let rows_affected = query(
+        "
+        UPDATE jobs
         SET
             status = $1,
             error_message = $2,
             run_at = NOW() + ($3 * INTERVAL '1 SECONDS')
         WHERE id = $4
-        AND worker_id = $5;",
+        AND worker_id = $5;
+        ",
     )
     .bind(JobStatus::Pending)
     .bind(error)
@@ -219,25 +239,28 @@ pub async fn store_job_error(
     .bind(job_id)
     .bind(worker_id)
     .execute(pool)
-    .await?
+    .await
+    .map_err(|e| WorkerError::temporary("Unable to store the job error").set_source(e))?
     .rows_affected();
 
-    Ok(updated_rows)
+    Ok(rows_affected)
 }
 
 pub async fn update_worker_shutdown_time(
     pool: &PgPool,
     worker_id: Uuid,
-) -> Result<u64, sqlx::Error> {
-    let updated_rows = query(
-        "UPDATE workers
+) -> Result<(), WorkerError> {
+    query(
+        "
+        UPDATE workers
         SET shutdown_at = NOW()
-        WHERE id = $1;",
+        WHERE id = $1;
+        ",
     )
     .bind(worker_id)
     .execute(pool)
-    .await?
-    .rows_affected();
+    .await
+    .map_err(|e| WorkerError::temporary("Failed to update worker shutdown time").set_source(e))?;
 
-    Ok(updated_rows)
+    Ok(())
 }
