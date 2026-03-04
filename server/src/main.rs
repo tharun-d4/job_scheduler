@@ -3,6 +3,18 @@ use tracing::{info, instrument};
 use server::{app, cleanup, error, lease_recovery, state};
 use shared::{config::load_server_config, db::connection, tracing::init_tracing};
 
+/// Server entrypoint.
+///
+/// Responsible for:
+/// - Initializing tracing/logging
+/// - Loading configuration
+/// - Establishing a database connection
+/// - Running database migrations
+/// - Spawning background maintenance tasks
+/// - Starting the HTTP server
+///
+/// Background tasks (lease recovery, cleanup) are started before starting the server.
+
 #[instrument]
 #[tokio::main]
 async fn main() -> Result<(), error::ServerError> {
