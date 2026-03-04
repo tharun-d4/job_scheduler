@@ -1,12 +1,5 @@
 use std::fmt;
 
-use lettre::{
-    address::AddressError, error::Error as LettreError, transport::smtp::Error as SmtpError,
-};
-use reqwest::Error as ReqwestError;
-use sqlx::Error as SqlxError;
-use thiserror::Error;
-
 #[derive(Debug, PartialEq)]
 pub enum ErrorStatus {
     Temporary,
@@ -14,21 +7,21 @@ pub enum ErrorStatus {
 }
 
 #[derive(Debug)]
-pub struct WorkerErrorV2 {
+pub struct WorkerError {
     pub status: ErrorStatus,
     pub message: String,
     pub source: Option<anyhow::Error>,
 }
 
-impl fmt::Display for WorkerErrorV2 {
+impl fmt::Display for WorkerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{self:?}")
     }
 }
 
-impl core::error::Error for WorkerErrorV2 {}
+impl core::error::Error for WorkerError {}
 
-impl WorkerErrorV2 {
+impl WorkerError {
     pub fn permanent(message: &str) -> Self {
         Self {
             status: ErrorStatus::Permanent,
@@ -50,49 +43,5 @@ impl WorkerErrorV2 {
 
     pub fn is_retryable(&self) -> bool {
         self.status == ErrorStatus::Temporary
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum WorkerError {
-    #[error("Database error")]
-    Database(SqlxError),
-    #[error("Email error: {0}")]
-    Email(String),
-    #[error("Invalid Job error")]
-    InvalidJob,
-    #[error("Webhook error: {0}")]
-    Webhook(String),
-    #[error("Reqwest error")]
-    Request(ReqwestError),
-}
-
-impl From<SqlxError> for WorkerError {
-    fn from(err: SqlxError) -> Self {
-        WorkerError::Database(err)
-    }
-}
-
-impl From<LettreError> for WorkerError {
-    fn from(err: LettreError) -> Self {
-        WorkerError::Email(err.to_string())
-    }
-}
-
-impl From<AddressError> for WorkerError {
-    fn from(err: AddressError) -> Self {
-        WorkerError::Email(err.to_string())
-    }
-}
-
-impl From<SmtpError> for WorkerError {
-    fn from(err: SmtpError) -> Self {
-        WorkerError::Email(err.to_string())
-    }
-}
-
-impl From<ReqwestError> for WorkerError {
-    fn from(err: ReqwestError) -> Self {
-        WorkerError::Request(err)
     }
 }

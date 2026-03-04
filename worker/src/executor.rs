@@ -7,7 +7,7 @@ use shared::db::models::Job;
 
 use crate::{
     db::queries,
-    error::WorkerErrorV2,
+    error::WorkerError,
     handlers::{email::send_email, webhook::send_webhook},
 };
 
@@ -18,7 +18,7 @@ pub async fn execute_job(
     worker_id: Uuid,
     smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
     client: reqwest::Client,
-) -> Result<(), WorkerErrorV2> {
+) -> Result<(), WorkerError> {
     let job_id = job.id;
 
     let retries_exhausted = job.attempts == job.max_retries;
@@ -38,7 +38,7 @@ pub async fn execute_job(
             std::thread::sleep(std::time::Duration::from_secs(10));
             Ok(None)
         }
-        _ => Err(WorkerErrorV2::permanent("Invalid job type")),
+        _ => Err(WorkerError::permanent("Invalid job type")),
     };
 
     match result {

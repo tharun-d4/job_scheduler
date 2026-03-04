@@ -3,11 +3,11 @@ use tracing::{error, info, instrument};
 use uuid::Uuid;
 
 use shared::{config::load_worker_config, db::connection, tracing::init_tracing};
-use worker::{db::queries, error::WorkerErrorV2, executor, handlers::email, heartbeat};
+use worker::{db::queries, error::WorkerError, executor, handlers::email, heartbeat};
 
 #[instrument]
 #[tokio::main]
-async fn main() -> Result<(), WorkerErrorV2> {
+async fn main() -> Result<(), WorkerError> {
     let _trace_guard = init_tracing("worker");
     let config = load_worker_config("./config").expect("Config Error");
 
