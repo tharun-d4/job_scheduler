@@ -7,7 +7,7 @@ use shared::db::models::Job;
 
 use crate::{
     db::queries,
-    error::WorkerError,
+    error::WorkerErrorV2,
     handlers::{email, models::EmailInfo, webhook::send_webhook},
 };
 
@@ -18,7 +18,7 @@ pub async fn execute_job(
     worker_id: Uuid,
     smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
     client: reqwest::Client,
-) -> Result<(), WorkerError> {
+) -> Result<(), WorkerErrorV2> {
     let job_id = job.id;
 
     let retries_exhausted = job.attempts == job.max_retries;
@@ -38,7 +38,7 @@ pub async fn execute_job(
             std::thread::sleep(std::time::Duration::from_secs(10));
             Ok(None)
         }
-        _ => Err(WorkerError::InvalidJob),
+        _ => Err(WorkerErrorV2::permanent("Invalid job type")),
     };
 
     match result {
@@ -88,9 +88,10 @@ pub async fn execute_job(
 async fn send_email(
     smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
     job: Job,
-) -> Result<Option<JsonValue>, WorkerError> {
-    let email_info: EmailInfo = serde_json::from_value(job.payload)
-        .map_err(|e| WorkerError::Email(format!("email payload json error: {:?}", e)))?;
+) -> Result<Option<JsonValue>, WorkerErrorV2> {
+    let email_info: EmailInfo = serde_json::from_value(job.payload).map_err(|e| {
+        WorkerErrorV2::permanent("Deserialization error of email info").set_source(e)
+    })?;
 
     info!("Sending an email: {:?}", email_info);
     email::send_email(smtp_sender, email_info).await?;
