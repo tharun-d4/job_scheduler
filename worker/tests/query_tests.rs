@@ -54,16 +54,22 @@ async fn claim_job_returns_job(pool: PgPool) {
     migrations = "../migrations",
     fixtures(path = "../../test_fixtures", scripts("invalid_jobs"))
 )]
-async fn store_job_error(pool: PgPool) {
+async fn update_job_error_and_backoff_time(pool: PgPool) {
     let worker_id = Uuid::parse_str("019bfe1d-228e-7938-8678-3798f454c236").unwrap();
 
     let job = queries::claim_job(&pool, worker_id, JOB_LEASE_DURATION)
         .await
         .unwrap()
         .unwrap();
-    queries::store_job_error(&pool, job.id, worker_id, "Invalid job".to_string(), 10)
-        .await
-        .unwrap();
+    queries::update_job_error_and_backoff_time(
+        &pool,
+        job.id,
+        worker_id,
+        "Invalid job".to_string(),
+        10,
+    )
+    .await
+    .unwrap();
 
     let job = get_job_by_id(&pool, job.id).await.unwrap();
     assert_eq!(job.error_message, Some("Invalid job".to_string()));

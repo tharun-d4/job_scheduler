@@ -41,7 +41,7 @@ impl WorkerError {
         self
     }
 
-    pub fn is_retryable(&self) -> bool {
-        self.status == ErrorStatus::Temporary
+    pub fn is_permanent(&self) -> bool {
+        self.status == ErrorStatus::Permanent
     }
 }

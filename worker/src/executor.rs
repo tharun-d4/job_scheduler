@@ -56,23 +56,30 @@ pub async fn execute_job(
                 retry_backoff_time_in_secs = backoff_secs,
                 "Failed to execute job"
             );
-            let updated_rows =
-                queries::store_job_error(pool, job_id, worker_id, err.to_string(), backoff_secs)
-                    .await?;
-            if updated_rows != 1 {
-                error!(
-                    updated_rows = updated_rows,
-                    "Failed to update job error and retry time"
-                );
-            }
 
-            if !err.is_retryable() || retries_exhausted {
+            if err.is_permanent() || retries_exhausted {
                 let moved_rows =
-                    queries::move_job_record_to_failed(pool, job_id, worker_id).await?;
+                    queries::move_job_record_to_failed(pool, job_id, worker_id, err.to_string())
+                        .await?;
                 if moved_rows == 1 {
                     info!("Moved the job to failed jobs");
                 } else {
                     error!(moved_rows = moved_rows, "Failed to move job");
+                }
+            } else {
+                let updated_rows = queries::update_job_error_and_backoff_time(
+                    pool,
+                    job_id,
+                    worker_id,
+                    err.to_string(),
+                    backoff_secs,
+                )
+                .await?;
+                if updated_rows != 1 {
+                    error!(
+                        updated_rows = updated_rows,
+                        "Failed to update job error and retry time"
+                    );
                 }
             }
         }

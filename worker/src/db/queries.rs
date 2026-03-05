@@ -177,6 +177,7 @@ pub async fn move_job_record_to_failed(
     pool: &PgPool,
     job_id: Uuid,
     worker_id: Uuid,
+    error: String,
 ) -> Result<u64, WorkerError> {
     let moved_rows = query(
         "
@@ -192,19 +193,38 @@ pub async fn move_job_record_to_failed(
                 max_retries,
                 created_at,
                 started_at,
-                NOW(),
                 worker_id,
                 attempts,
-                error_message,
                 result,
                 lease_expires_at
         )
         INSERT INTO failed_jobs
-        SELECT * FROM deleted_job;
+        (
+            id,
+            job_type,
+            payload,
+            priority,
+            max_retries,
+            created_at,
+            started_at,
+            worker_id,
+            attempts,
+            result,
+            lease_expires_at,
+            error_message,
+            failed_at
+        )
+        SELECT
+            *,
+            $3,
+            $4
+        FROM deleted_job;
         ",
     )
     .bind(job_id)
     .bind(worker_id)
+    .bind(error)
+    .bind(Utc::now())
     .execute(pool)
     .await
     .map_err(|e| WorkerError::temporary("Unable to move the job to failed table").set_source(e))?
@@ -213,7 +233,7 @@ pub async fn move_job_record_to_failed(
     Ok(moved_rows)
 }
 
-pub async fn store_job_error(
+pub async fn update_job_error_and_backoff_time(
     pool: &PgPool,
     job_id: Uuid,
     worker_id: Uuid,
