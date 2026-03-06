@@ -6,7 +6,8 @@ INSERT INTO jobs
   status,
   priority,
   max_retries,
-  created_at
+  created_at,
+  run_at
 )
 VALUES
 (
@@ -18,5 +19,6 @@ VALUES
   'pending',
   4,
   2,
+  NOW() AT TIME ZONE 'UTC',
   NOW() AT TIME ZONE 'UTC'
 );

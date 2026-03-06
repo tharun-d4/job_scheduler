@@ -1,2 +1,0 @@
-ALTER TABLE jobs
-ADD COLUMN lease_expires_at TIMESTAMPTZ;

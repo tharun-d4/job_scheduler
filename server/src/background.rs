@@ -2,7 +2,7 @@ use sqlx::postgres::PgPool;
 use tracing::{error, warn};
 
 use crate::db::queries::{
-    move_retry_exhausted_jobs_to_failed_jobs, recover_unfinished_lease_expired_jobs,
+    mark_retry_exhausted_jobs_as_failed, recover_unfinished_lease_expired_jobs,
 };
 
 pub async fn lease_recovery_task(
@@ -41,7 +41,7 @@ pub async fn cleanup_task(pool: PgPool, interval: u8) -> tokio::task::JoinHandle
         loop {
             interval.tick().await;
 
-            let result = move_retry_exhausted_jobs_to_failed_jobs(&pool).await;
+            let result = mark_retry_exhausted_jobs_as_failed(&pool).await;
             match result {
                 Ok(count) => {
                     if count > 0 {

@@ -9,6 +9,7 @@ pub enum JobStatus {
     Pending,
     Running,
     Completed,
+    Failed,
 }
 
 #[derive(Debug, PartialEq, FromRow, Serialize, Deserialize)]
@@ -21,9 +22,10 @@ pub struct Job {
     pub max_retries: i16,
     pub created_at: DateTime<Utc>,
     pub run_at: DateTime<Utc>,
-    pub started_at: Option<DateTime<Utc>>,
-    pub lease_expires_at: Option<DateTime<Utc>>,
     pub worker_id: Option<Uuid>,
+    pub lease_expires_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
     pub attempts: i16,
     pub error_message: Option<String>,
     pub result: Option<JsonValue>,

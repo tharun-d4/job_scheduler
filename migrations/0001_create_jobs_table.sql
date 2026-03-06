@@ -1,4 +1,4 @@
-CREATE TYPE job_status AS ENUM ('pending', 'running', 'completed');
+CREATE TYPE job_status AS ENUM ('pending', 'running', 'completed', 'failed');
 
 CREATE TABLE jobs (
   id UUID PRIMARY KEY,
@@ -8,10 +8,12 @@ CREATE TABLE jobs (
   priority SMALLINT NOT NULL,
   max_retries SMALLINT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL,
-  started_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ,
+  run_at TIMESTAMPTZ NOT NULL,
   worker_id UUID,
-  attempts SMALLINT,
+  lease_expires_at TIMESTAMPTZ,
+  started_at TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  attempts SMALLINT NOT NULL DEFAULT 0,
   error_message TEXT,
   result JSONB
 );

@@ -80,36 +80,7 @@ pub async fn claim_job(
     .map_err(|e| WorkerError::temporary("Failed to claim a job").set_source(e))
 }
 
-//pub async fn mark_job_as_completed(
-//    pool: &PgPool,
-//    job_id: Uuid,
-//    worker_id: Uuid,
-//    result: Option<JsonValue>,
-//) -> Result<u64, sqlx::Error> {
-//    let updated_rows = query(
-//        "UPDATE jobs
-//        SET
-//            status = $1,
-//            completed_at = $2,
-//            result = $3
-//        WHERE id = $4
-//        AND worker_id = $5
-//        AND status = $6;",
-//    )
-//    .bind(JobStatus::Completed)
-//    .bind(Utc::now())
-//    .bind(result)
-//    .bind(job_id)
-//    .bind(worker_id)
-//    .bind(JobStatus::Running)
-//    .execute(pool)
-//    .await?
-//    .rows_affected();
-//
-//    Ok(updated_rows)
-//}
-
-pub async fn move_job_record_to_completed(
+pub async fn mark_job_as_completed(
     pool: &PgPool,
     job_id: Uuid,
     worker_id: Uuid,
@@ -117,120 +88,28 @@ pub async fn move_job_record_to_completed(
 ) -> Result<u64, WorkerError> {
     let rows_affected = query(
         "
-        WITH completed AS (
-            DELETE FROM jobs
-            WHERE id = $1
-            AND worker_id = $2
-            AND status = $3
-            RETURNING
-                id,
-                job_type,
-                payload,
-                priority,
-                max_retries,
-                created_at,
-                run_at,
-                started_at,
-                worker_id,
-                lease_expires_at,
-                attempts,
-                error_message
-        )
-        INSERT INTO completed_jobs
-        (
-            id,
-            job_type,
-            payload,
-            priority,
-            max_retries,
-            created_at,
-            run_at,
-            started_at,
-            worker_id,
-            lease_expires_at,
-            attempts,
-            error_message,
-            completed_at,
-            result
-        )
-        SELECT
-            *,
-            $4,
-            $5
-        FROM completed;
+        UPDATE jobs
+        SET
+            status = $1,
+            finished_at = $2,
+            result = $3
+        WHERE id = $4
+            AND worker_id = $5
+            AND status = $6;
         ",
     )
+    .bind(JobStatus::Completed)
+    .bind(Utc::now())
+    .bind(result)
     .bind(job_id)
     .bind(worker_id)
     .bind(JobStatus::Running)
-    .bind(Utc::now())
-    .bind(result)
     .execute(pool)
     .await
-    .map_err(|e| WorkerError::temporary("Unable to move the job to completed table").set_source(e))?
+    .map_err(|e| WorkerError::temporary("Failed to mark the job as completed").set_source(e))?
     .rows_affected();
 
     Ok(rows_affected)
-}
-
-pub async fn move_job_record_to_failed(
-    pool: &PgPool,
-    job_id: Uuid,
-    worker_id: Uuid,
-    error: String,
-) -> Result<u64, WorkerError> {
-    let moved_rows = query(
-        "
-        WITH deleted_job AS (
-            DELETE FROM jobs
-            WHERE id = $1
-                AND worker_id = $2
-            RETURNING
-                id,
-                job_type,
-                payload,
-                priority,
-                max_retries,
-                created_at,
-                started_at,
-                worker_id,
-                attempts,
-                result,
-                lease_expires_at
-        )
-        INSERT INTO failed_jobs
-        (
-            id,
-            job_type,
-            payload,
-            priority,
-            max_retries,
-            created_at,
-            started_at,
-            worker_id,
-            attempts,
-            result,
-            lease_expires_at,
-            error_message,
-            failed_at
-        )
-        SELECT
-            *,
-            $3,
-            $4
-        FROM deleted_job;
-        ",
-    )
-    .bind(job_id)
-    .bind(worker_id)
-    .bind(error)
-    .bind(Utc::now())
-    .execute(pool)
-    .await
-    .map_err(|e| WorkerError::temporary("Unable to move the job to failed table").set_source(e))?
-    .rows_affected();
-
-    Ok(moved_rows)
 }
 
 pub async fn update_job_error_and_backoff_time(
@@ -258,12 +137,43 @@ pub async fn update_job_error_and_backoff_time(
     .bind(worker_id)
     .execute(pool)
     .await
-    .map_err(|e| WorkerError::temporary("Unable to store the job error").set_source(e))?
+    .map_err(|e| WorkerError::temporary("Failed to update the job error").set_source(e))?
     .rows_affected();
 
     Ok(rows_affected)
 }
 
+pub async fn mark_job_as_failed(
+    pool: &PgPool,
+    job_id: Uuid,
+    worker_id: Uuid,
+    error: String,
+) -> Result<u64, WorkerError> {
+    let rows_affected = query(
+        "
+        UPDATE jobs
+        SET
+            status = $1,
+            finished_at = $2,
+            error_message = $3
+        WHERE id = $4
+            AND worker_id = $5
+            AND status = $6;
+        ",
+    )
+    .bind(JobStatus::Failed)
+    .bind(Utc::now())
+    .bind(error)
+    .bind(job_id)
+    .bind(worker_id)
+    .bind(JobStatus::Running)
+    .execute(pool)
+    .await
+    .map_err(|e| WorkerError::temporary("Failed to mark the job as failed").set_source(e))?
+    .rows_affected();
+
+    Ok(rows_affected)
+}
 pub async fn update_worker_shutdown_time(
     pool: &PgPool,
     worker_id: Uuid,

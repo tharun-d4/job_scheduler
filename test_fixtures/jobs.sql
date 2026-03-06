@@ -1,5 +1,5 @@
 INSERT INTO jobs 
-(id, job_type, payload, status, priority, max_retries, created_at)
+(id, job_type, payload, status, priority, max_retries, created_at, run_at)
 VALUES
 (
   '019bfadc-28bb-781d-9d22-acf23fe50117',
@@ -13,6 +13,7 @@ VALUES
   'pending',
   5,
   3,
+  NOW() AT TIME ZONE 'UTC',
   NOW() AT TIME ZONE 'UTC'
 ),
 (
@@ -27,6 +28,7 @@ VALUES
   'pending',
   1,
   5,
+  NOW() AT TIME ZONE 'UTC',
   NOW() AT TIME ZONE 'UTC'
 ),
 (
@@ -42,5 +44,6 @@ VALUES
   'pending',
   2,
   5,
+  NOW() AT TIME ZONE 'UTC',
   NOW() AT TIME ZONE 'UTC'
 );

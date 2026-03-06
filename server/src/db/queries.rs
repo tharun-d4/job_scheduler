@@ -17,30 +17,14 @@ pub async fn recover_unfinished_lease_expired_jobs(pool: &PgPool) -> Result<u64,
     Ok(jobs_recovered)
 }
 
-pub async fn move_retry_exhausted_jobs_to_failed_jobs(pool: &PgPool) -> Result<u64, sqlx::Error> {
+pub async fn mark_retry_exhausted_jobs_as_failed(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let moved = query!(
         "
-        WITH deleted_jobs AS (
-            DELETE FROM jobs
-            WHERE status = 'pending'
+        UPDATE jobs
+        SET status = 'failed',
+            finished_at = NOW()
+        WHERE status = 'pending'
             AND attempts >= max_retries
-            RETURNING
-                id,
-                job_type,
-                payload,
-                priority,
-                max_retries,
-                created_at,
-                started_at,
-                NOW(),
-                worker_id,
-                attempts,
-                error_message,
-                result,
-                lease_expires_at
-        )
-        INSERT INTO failed_jobs
-        SELECT * FROM deleted_jobs;
         ",
     )
     .execute(pool)

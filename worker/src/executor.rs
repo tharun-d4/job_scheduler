@@ -44,8 +44,7 @@ pub async fn execute_job(
     match result {
         Ok(res) => {
             info!("Job completed");
-            let moved_jobs =
-                queries::move_job_record_to_completed(pool, job_id, worker_id, res).await?;
+            let moved_jobs = queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
             if moved_jobs != 1 {
                 error!(moved_jobs = moved_jobs, "Failed to mark job as completed");
             }
@@ -59,12 +58,9 @@ pub async fn execute_job(
 
             if err.is_permanent() || retries_exhausted {
                 let moved_rows =
-                    queries::move_job_record_to_failed(pool, job_id, worker_id, err.to_string())
-                        .await?;
-                if moved_rows == 1 {
-                    info!("Moved the job to failed jobs");
-                } else {
-                    error!(moved_rows = moved_rows, "Failed to move job");
+                    queries::mark_job_as_failed(pool, job_id, worker_id, err.to_string()).await?;
+                if moved_rows != 1 {
+                    error!(moved_rows = moved_rows, "Failed to job as failed");
                 }
             } else {
                 let updated_rows = queries::update_job_error_and_backoff_time(
