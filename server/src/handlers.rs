@@ -13,7 +13,10 @@ use tracing::{info, instrument};
 use uuid::Uuid;
 
 use crate::{
-    db::{models::JobStats, queries},
+    db::{
+        models::{JobStats, JobStatsByJobType},
+        queries,
+    },
     error::ServerError,
     state::AppState,
 };
@@ -140,8 +143,21 @@ pub async fn list_jobs(
     }))
 }
 
-pub async fn job_stats(State(state): State<Arc<AppState>>) -> Result<Json<JobStats>, ServerError> {
-    let stats = queries::get_job_stats(&state.pool).await?;
-    info!(stats = ?stats);
-    Ok(Json(stats))
+#[derive(Serialize)]
+pub struct JobStatsResponse {
+    overall: JobStats,
+    by_job_type: Vec<JobStatsByJobType>,
+}
+
+pub async fn job_stats(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<JobStatsResponse>, ServerError> {
+    let overall = queries::get_job_stats(&state.pool).await?;
+    let by_job_type = queries::get_job_stats_by_job_type(&state.pool).await?;
+    info!(overall = ?overall, by_job_type = ?by_job_type);
+
+    Ok(Json(JobStatsResponse {
+        overall,
+        by_job_type,
+    }))
 }
