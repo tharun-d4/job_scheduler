@@ -2,6 +2,10 @@ use axum::http::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use server::{
+    db::models::{JobStats, JobStatsByJobType},
+    handlers::JobStatsResponse,
+};
 use shared::db::models::Job;
 
 mod test_server;
@@ -81,4 +85,44 @@ async fn get_job_for_invalid_job_id_returns_404(pool: PgPool) {
 
     let get_job_response = server.get(&format!("/jobs/{}", job_id)).await;
     get_job_response.assert_status(StatusCode::NOT_FOUND);
+}
+
+#[sqlx::test(
+    migrations = "../migrations",
+    fixtures(path = "../../test_fixtures", scripts("jobs"))
+)]
+async fn job_stats_returns_200(pool: PgPool) {
+    let server = test_server::build_test_server(pool);
+
+    let response = server.get("/jobs/stats").await;
+    response.assert_status(StatusCode::OK);
+
+    let json = response.json::<JobStatsResponse>();
+    assert_eq!(
+        json,
+        JobStatsResponse {
+            overall: JobStats {
+                pending: 3,
+                running: 0,
+                completed: 0,
+                failed: 0,
+            },
+            by_job_type: vec![
+                JobStatsByJobType {
+                    job_type: String::from("send_email"),
+                    pending: 2,
+                    running: 0,
+                    completed: 0,
+                    failed: 0,
+                },
+                JobStatsByJobType {
+                    job_type: String::from("send_webhook"),
+                    pending: 1,
+                    running: 0,
+                    completed: 0,
+                    failed: 0,
+                }
+            ]
+        }
+    )
 }

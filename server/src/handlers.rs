@@ -143,10 +143,10 @@ pub async fn list_jobs(
     }))
 }
 
-#[derive(Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct JobStatsResponse {
-    overall: JobStats,
-    by_job_type: Vec<JobStatsByJobType>,
+    pub overall: JobStats,
+    pub by_job_type: Vec<JobStatsByJobType>,
 }
 
 pub async fn job_stats(
