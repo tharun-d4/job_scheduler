@@ -12,10 +12,14 @@ use sqlx::QueryBuilder;
 use tracing::{info, instrument};
 use uuid::Uuid;
 
-use crate::{error::ServerError, state::AppState};
+use crate::{
+    db::{models::JobStats, queries},
+    error::ServerError,
+    state::AppState,
+};
 use shared::db::{
     models::{CreateJob, Job, JobStatus},
-    queries::{get_job_by_id, insert_job},
+    queries as shared_queries,
 };
 
 #[derive(Debug, Deserialize)]
@@ -37,7 +41,7 @@ pub async fn create_job(
     State(state): State<Arc<AppState>>,
     Json(job_payload): Json<JobPayload>,
 ) -> Result<(StatusCode, Json<JobId>), ServerError> {
-    let job_id = insert_job(
+    let job_id = shared_queries::insert_job(
         &state.pool,
         CreateJob {
             job_type: job_payload.job_type,
@@ -55,11 +59,11 @@ pub async fn create_job(
 }
 
 #[instrument(skip(state))]
-pub async fn get_job(
+pub async fn get_job_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Job>, ServerError> {
-    match get_job_by_id(&state.pool, id).await {
+    match shared_queries::get_job_by_id(&state.pool, id).await {
         Some(job) => Ok(Json(job)),
         None => Err(ServerError::NotFound("Job not found".to_string())),
     }
@@ -134,4 +138,10 @@ pub async fn list_jobs(
         limit: params.limit,
         offset: params.offset,
     }))
+}
+
+pub async fn job_stats(State(state): State<Arc<AppState>>) -> Result<Json<JobStats>, ServerError> {
+    let stats = queries::get_job_stats(&state.pool).await?;
+    info!(stats = ?stats);
+    Ok(Json(stats))
 }

@@ -1,4 +1,6 @@
-use sqlx::{postgres::PgPool, query};
+use sqlx::{postgres::PgPool, query, query_as};
+
+use crate::db::models::JobStats;
 
 pub async fn recover_unfinished_lease_expired_jobs(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let jobs_recovered = query!(
@@ -32,4 +34,19 @@ pub async fn mark_retry_exhausted_jobs_as_failed(pool: &PgPool) -> Result<u64, s
     .rows_affected();
 
     Ok(moved)
+}
+
+pub async fn get_job_stats(pool: &PgPool) -> Result<JobStats, sqlx::Error> {
+    query_as(
+        "
+        SELECT
+            COUNT(id) FILTER(WHERE status='pending') as pending,
+            COUNT(id) FILTER(WHERE status='running') as running,
+            COUNT(id) FILTER(WHERE status='completed') as completed,
+            COUNT(id) FILTER(WHERE status='failed') as failed
+        FROM jobs;
+        ",
+    )
+    .fetch_one(pool)
+    .await
 }
