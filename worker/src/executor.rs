@@ -1,5 +1,6 @@
 use lettre::{Tokio1Executor, transport::smtp::AsyncSmtpTransport};
 use sqlx::postgres::PgPool;
+use tokio::time::Instant;
 use tracing::{error, info, instrument};
 use uuid::Uuid;
 
@@ -25,6 +26,7 @@ pub async fn execute_job(
 
     let backoff_secs = retry_backoff_secs(job.attempts);
 
+    let start = Instant::now();
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(smtp_sender, job.payload).await,
         "send_webhook" => send_webhook(client, job.payload).await,
@@ -40,6 +42,8 @@ pub async fn execute_job(
         }
         _ => Err(WorkerError::permanent("Invalid job type")),
     };
+    let end = start.elapsed();
+    info!(duration_ms = end.as_millis(), "Job executed");
 
     match result {
         Ok(res) => {
@@ -80,6 +84,9 @@ pub async fn execute_job(
             }
         }
     }
+
+    let end = start.elapsed();
+    info!(overall_duration_ms = end.as_millis(), "Job updated in DB");
 
     Ok(())
 }

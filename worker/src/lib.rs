@@ -60,7 +60,7 @@ pub async fn init() -> Result<(), WorkerError> {
                     }
                     Ok(None) => {
                         // No job to run
-                        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                     }
                     Err(err) => error!(error = ?err, "Claim job error"),
                 }
