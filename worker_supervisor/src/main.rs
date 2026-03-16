@@ -52,7 +52,7 @@ fn main() {
 }
 
 fn spawn_worker() -> Child {
-    let child = Command::new("./target/debug/worker")
+    let child = Command::new("./target/release/worker")
         .spawn()
         .expect("Failed to spawn worker process");
     println!("Spawned Worker (PID: {:?})", child.id());
