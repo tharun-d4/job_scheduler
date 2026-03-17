@@ -19,7 +19,6 @@ pub fn create_router(state: AppState) -> Router {
     );
 
     Router::new()
-        .route("/", get(|| async { "Hello World" }))
         .route("/jobs", get(handlers::list_jobs).post(handlers::create_job))
         .route("/jobs/{id}", get(handlers::get_job_by_id))
         .route("/jobs/stats", get(handlers::job_stats))
