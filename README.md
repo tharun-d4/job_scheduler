@@ -21,15 +21,16 @@ A distributed job scheduler written in Rust for reliable background job processi
 ## 2. Core Entities
 The system is modeled around these primary database tables.
 
-- **Job:** Hot queue storing non-terminal jobs (pending, running, completed, failed)
-- **Workers:** Tracks active worker processes and heartbeats
-
+- **Jobs**: Stores all jobs with their current state (pending, running, completed, failed)
+- **Workers**: Tracks active worker processes and heartbeats
+  
 ## 3. API Design
 The server exposes REST APIs for job submission and interaction.
 Example endpoints:
 - **POST /jobs**: Submit a new job
-- **GET /jobs/{id}**: Retrieve job status
+- **GET /jobs/{id}**: Retrieve a job
 - **GET /jobs**: List jobs
+- **GET /jobs/stats**: Get job statistics
 
 ## 4. High-Level Design
 ```mermaid
