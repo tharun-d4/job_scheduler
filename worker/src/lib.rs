@@ -17,7 +17,7 @@ pub async fn init() -> Result<(), WorkerError> {
     let config = load_worker_config("./config")
         .map_err(|e| WorkerError::permanent("Failed to load worker config").set_source(e))?;
 
-    let pool = connection::create_pool(&config.database)
+    let pool = connection::create_pool(config.database, config.worker.db_pool_size)
         .await
         .map_err(|e| WorkerError::permanent("Failed to establish db connection").set_source(e))?;
     connection::run_migrations(&pool)

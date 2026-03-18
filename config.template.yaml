@@ -1,14 +1,15 @@
 database:
   url: "postgres://user:password@127.0.0.1:9000/app_db"
-  pool_size: 5
 
 server:
   host: "127.0.0.1"
   port: 8000
+  db_pool_size: 10
   lease_recovery: 5
   cleanup: 30
 
 worker:
+  db_pool_size: 4
   heartbeat: 10
   lease_duration: 15
 

@@ -4,19 +4,20 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Database {
     pub url: String,
-    pub pool_size: u8,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
+    pub db_pool_size: u8,
     pub lease_recovery: u8,
     pub cleanup: u8,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Worker {
+    pub db_pool_size: u8,
     pub heartbeat: u8,
     pub lease_duration: u8,
 }

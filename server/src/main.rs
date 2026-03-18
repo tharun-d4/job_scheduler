@@ -21,7 +21,7 @@ async fn main() -> Result<(), error::ServerError> {
     let _trace_guard = init_tracing("server");
     let config = load_server_config("./config").expect("Config Error");
 
-    let pool = connection::create_pool(&config.database).await?;
+    let pool = connection::create_pool(config.database, config.server.db_pool_size).await?;
     connection::run_migrations(&pool).await?;
 
     background::lease_recovery_task(pool.clone(), config.server.lease_recovery).await;
