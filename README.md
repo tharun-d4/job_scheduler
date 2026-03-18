@@ -1,6 +1,77 @@
 # Job Scheduler
 A distributed job scheduler written in Rust for reliable background job processing with prioritization, retries, observability, lease-based execution, and process supervision.
 
+## Quick Start
+
+**1. Start PostgreSQL and Mailpit SMTP server**
+```bash
+docker compose up -d
+```
+
+**2. Configure**
+```bash
+cp config.template.yaml config.yaml
+# Edit config.yaml if needed
+```
+
+**3. Run migrations**
+```bash
+sqlx migrate run
+```
+
+**4. Start API Server**
+```bash
+cargo run --release --bin server
+```
+
+**5. Start Worker Supervisor**
+```bash
+cargo build --release --bin worker # Build the worker binary that is used by the supervisor
+cargo run --release --bin worker_supervisor # Run the supervisor binary
+```
+
+**6. Submit a test job**
+```bash
+curl -X POST "http://localhost:8000/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{
+      "job_type": "send_email",
+      "payload": {
+        "to": "test@mail.com",
+        "from": "scheduler@mail.com",
+        "subject": "Test Email",
+        "body": "Hello from Job Scheduler!"
+      },
+       "priority": 5,
+       "max_retries": 3
+    }'
+```
+
+**7. View the email**
+Open http://localhost:8025 to see the email in Mailpit's inbox.
+
+## Architecture
+**Components**
+- **Server:** HTTP server for job submission and queries
+- **Worker:** Background job executor process
+- **Worker Supervisor:** Process manager that spawns and monitors workers
+- **PostgreSQL:** Job queue and persistence layer
+
+## Performance
+**Benchmark Results:**
+| Metric | Result |
+| ------ | ------ |
+| API Submission | ~4,500 jobs/sec |
+| Email Processing | ~220 jobs/sec (10 Workers) |
+| Per-worker throughput | ~22 emails/sec |
+| Average email latency | ~45ms per email |
+
+**Test Conditions:**
+- 10,000 emails to local Mailpit SMTP server
+- 10 concurrent worker processes
+- PostgreSQL connection pool: 50 connections (5 per worker)
+- Platform: Lenovo Ideapad (Intel Core i3, 8GB RAM)
+
 # System Design
 ## 1. Requirements
 #### Functional Requirements
@@ -67,24 +138,3 @@ graph TD
 - 🔁 Periodic / Recurring jobs
 - 🖥️ Dashboard for real-time visualization
 - 📈 Benchmarking & performance profiling
-
-## Technologies
-- **Server:** Rust (tokio, axum)
-- **Worker:** Rust (tokio)
-- **Database:** PostgreSQL (sqlx)
-
-## Performance
-
-**Benchmarks**
-| Metric | Result |
-| ------ | ------ |
-| API Submission | ~4,500 jobs/sec |
-| Email Processing | ~220 jobs/sec (10 Workers) |
-| Per-worker throughput | ~22 emails/sec |
-| Average email latency | ~45ms per email |
-
-**Test Conditions:**
-- 10,000 emails to local Mailpit SMTP server
-- 10 concurrent worker processes
-- PostgreSQL connection pool: 50 connections (5 per worker)
-- Platform: Lenovo Ideapad (Intel Core i3, 8GB RAM)
