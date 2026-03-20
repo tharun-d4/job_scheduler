@@ -97,6 +97,28 @@ async fn job_stats_returns_200(pool: PgPool) {
     let response = server.get("/jobs/stats").await;
     response.assert_status(StatusCode::OK);
 
+    let json = response.json::<JobStats>();
+    assert_eq!(
+        json,
+        JobStats {
+            pending: 3,
+            running: 0,
+            completed: 0,
+            failed: 0,
+        },
+    )
+}
+
+#[sqlx::test(
+    migrations = "../migrations",
+    fixtures(path = "../../test_fixtures", scripts("jobs"))
+)]
+async fn job_stats_detailed_returns_200(pool: PgPool) {
+    let server = test_server::build_test_server(pool);
+
+    let response = server.get("/jobs/stats/detailed").await;
+    response.assert_status(StatusCode::OK);
+
     let json = response.json::<JobStatsResponse>();
     assert_eq!(
         json,
