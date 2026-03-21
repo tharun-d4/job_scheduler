@@ -1,3 +1,36 @@
+//! # Worker
+//!
+//! Worker is a process that executes the jobs claimed from the database
+//! and stores the result or error back in the database.
+//!
+//! These jobs are initially set to pending state by the server that submits/stores the jobs initially
+//! in the database when a user submits it. Then worker processes that are idle pick up the jobs
+//! one at a time and matches with the current job types.
+//!
+//! Registered job types are:
+//!     - send_email
+//!     - send_webhook
+//!     - will_crash (for testing purposes)
+//!     - long_running_job (it just simulates a long running job)
+//!
+//! If the job type does not match with the registered job types, then that job is marked as
+//! permanently failed since it is an invalid job type and there is no point in retrying it.
+//!
+//! If the job type matches, then the worker simply executes it. If the worker encountered an error,
+//! then the error is stored in database.
+//! If the error is permanent like a serialization error or a wrong payload structure error,
+//! then the job is marked as permanently failed.
+//!
+//! If its a temporary error like a service unavailable for a webhook to be sent, then the job is marked
+//! as pending so that another (or possibly the same) worker picks it up to retry it. The job is retried
+//! until it succeeds and it satisfies the condition of attempts < max_retries. Also the retries
+//! are done with exponential backoff in seconds.
+//!
+//! Note that the job has to be executed within the lease duration time, if execution time exceeds
+//! this duraiton that job is automatically recovered by the server that assumes that the worker had
+//! failed to run the job.
+//!
+
 pub mod db;
 pub mod error;
 pub mod executor;
