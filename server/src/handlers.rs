@@ -25,6 +25,12 @@ use shared::db::{
     queries as shared_queries,
 };
 
+pub async fn handler_404() -> Result<(), ServerError> {
+    Err(ServerError::NotFound(
+        "Careful! You are calling an API that doesn't exist".to_string(),
+    ))
+}
+
 #[derive(Debug, Deserialize)]
 pub struct JobPayload {
     job_type: String,
