@@ -11,6 +11,7 @@ pub enum ServerError {
     Database(sqlx::Error),
     Internal(IoError),
     NotFound(String),
+    BadRequest(String),
 }
 
 #[derive(serde::Serialize)]
@@ -28,6 +29,7 @@ impl IntoResponse for ServerError {
         tracing::error!(?self, "Error occurred");
         let (status_code, msg) = match self {
             ServerError::NotFound(s) => (StatusCode::NOT_FOUND, s),
+            ServerError::BadRequest(s) => (StatusCode::BAD_REQUEST, s),
             _ => generic_error,
         };
 

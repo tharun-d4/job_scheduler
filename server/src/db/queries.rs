@@ -1,6 +1,6 @@
 use chrono::Utc;
 use shared::db::models::JobStatus;
-use sqlx::{postgres::PgPool, query, query_as};
+use sqlx::{Executor, Postgres, postgres::PgPool, query, query_as, query_scalar};
 use uuid::Uuid;
 
 use crate::db::models::{JobStats, JobStatsByJobType};
@@ -73,7 +73,26 @@ pub async fn get_job_stats_by_job_type(
     .await
 }
 
-pub async fn cancel_job(pool: &PgPool, job_id: Uuid) -> Result<u64, sqlx::Error> {
+pub async fn get_job_status<'c, E>(executor: E, job_id: Uuid) -> Result<JobStatus, sqlx::Error>
+where
+    E: Executor<'c, Database = Postgres>,
+{
+    query_scalar(
+        "
+            SELECT status
+            FROM jobs
+            WHERE id = $1;
+            ",
+    )
+    .bind(job_id)
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn cancel_job<'c, E>(executor: E, job_id: Uuid) -> Result<u64, sqlx::Error>
+where
+    E: Executor<'c, Database = Postgres>,
+{
     let rows_affected = query(
         "
             UPDATE jobs
@@ -87,7 +106,7 @@ pub async fn cancel_job(pool: &PgPool, job_id: Uuid) -> Result<u64, sqlx::Error>
     .bind(Utc::now())
     .bind(job_id)
     .bind(JobStatus::Pending)
-    .execute(pool)
+    .execute(executor)
     .await?
     .rows_affected();
 

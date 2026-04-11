@@ -72,14 +72,31 @@ pub async fn cancel_job(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ServerError> {
-    let rows_affected = queries::cancel_job(&state.pool, id).await?;
+    let mut txn = state.pool.begin().await?;
 
-    if rows_affected != 1 {
-        info!(job_id = ?id, "Job not found");
-        Err(ServerError::NotFound("Job not found".to_string()))
-    } else {
-        info!(job_id = ?id, "Job is cancelled");
-        Ok(StatusCode::NO_CONTENT)
+    let job_status = queries::get_job_status(&mut *txn, id).await?;
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    let error = "Cannot cancel job.";
+    match job_status {
+        JobStatus::Pending => {
+            let rows_affected = queries::cancel_job(&mut *txn, id).await?;
+
+            if rows_affected != 1 {
+                info!(job_id = ?id, error = error);
+
+                Err(ServerError::BadRequest(error.into()))
+            } else {
+                info!(job_id = ?id, "Job is cancelled");
+                txn.commit().await?;
+
+                Ok(StatusCode::NO_CONTENT)
+            }
+        }
+        others => Err(ServerError::BadRequest(format!(
+            "{} Current status: {:?}",
+            error, others
+        ))),
     }
 }
 
