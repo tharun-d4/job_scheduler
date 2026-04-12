@@ -134,9 +134,10 @@ graph TD
 - **🧠 Worker Process Supervision:** A separate supervisor process spawns workers based on configuration, continuously monitors their exit status, and automatically respawns them if they crash.
 - **🗓️ Scheduled jobs (One-time)**
 - **📊 API to query job status & statistics**
-- ❌ Job Cancellation
+- **❌ Job Cancellation**
 
 ### Planned Enhancements
 - 🔁 Periodic / Recurring jobs
 - 🖥️ Dashboard for real-time visualization
 - 📈 Benchmarking & performance profiling
+- ⛓️ Job Dependencies & DAG Workflows

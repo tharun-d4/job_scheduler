@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use shared::db::{
-    models::{CreateJob, Job, JobStatus},
+    models::{CreateJob, Job, JobStatus, RunMode},
     queries as shared_queries,
 };
 use sqlx::QueryBuilder;
@@ -38,6 +38,7 @@ pub struct JobPayload {
     priority: Option<i16>,
     max_retries: Option<i16>,
     schedule_at: Option<DateTime<Utc>>,
+    cron_expression: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,11 +51,21 @@ pub async fn create_job(
     State(state): State<Arc<AppState>>,
     Json(job_payload): Json<JobPayload>,
 ) -> Result<(StatusCode, Json<JobId>), ServerError> {
+    let mut run_mode = RunMode::Immediate;
+    if job_payload.schedule_at.is_some() {
+        run_mode = RunMode::Scheduled;
+    }
+    if job_payload.cron_expression.is_some() {
+        run_mode = RunMode::Recurring;
+    }
+
     let job_id = shared_queries::insert_job(
         &state.pool,
         CreateJob {
+            run_mode: run_mode,
             job_type: job_payload.job_type,
             payload: job_payload.payload,
+            cron_expression: job_payload.cron_expression,
             status: JobStatus::Pending,
             priority: job_payload.priority.unwrap_or(1),
             max_retries: job_payload.max_retries.unwrap_or(1),

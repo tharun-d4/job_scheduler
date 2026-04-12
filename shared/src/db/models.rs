@@ -3,6 +3,16 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, types::JsonValue};
 use uuid::Uuid;
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "run_mode_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum RunMode {
+    Immediate,
+    Scheduled,
+    Recurring,
+    Workflow,
+}
+
 #[derive(Debug, PartialEq, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "job_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
@@ -17,8 +27,10 @@ pub enum JobStatus {
 #[derive(Debug, PartialEq, FromRow, Serialize, Deserialize)]
 pub struct Job {
     pub id: Uuid,
+    pub run_mode: RunMode,
     pub job_type: String,
     pub payload: JsonValue,
+    pub cron_expression: Option<String>,
     pub status: JobStatus,
     pub priority: i16,
     pub max_retries: i16,
@@ -35,8 +47,10 @@ pub struct Job {
 
 #[derive(Debug)]
 pub struct CreateJob {
+    pub run_mode: RunMode,
     pub job_type: String,
     pub payload: JsonValue,
+    pub cron_expression: Option<String>,
     pub status: JobStatus,
     pub priority: i16,
     pub max_retries: i16,

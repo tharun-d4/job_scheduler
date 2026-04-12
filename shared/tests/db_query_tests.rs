@@ -1,6 +1,6 @@
 use chrono::Utc;
 use shared::db::{
-    models::{CreateJob, JobStatus},
+    models::{CreateJob, JobStatus, RunMode},
     queries,
 };
 use sqlx::{PgPool, types::JsonValue};
@@ -12,7 +12,9 @@ async fn insert_job_returns_job_id(pool: PgPool) -> Result<(), sqlx::Error> {
         &pool,
         CreateJob {
             job_type: "new_job".to_string(),
+            run_mode: RunMode::Immediate,
             payload: JsonValue::String("A new job".to_string()),
+            cron_expression: None,
             status: JobStatus::Pending,
             priority: 1,
             max_retries: 5,
