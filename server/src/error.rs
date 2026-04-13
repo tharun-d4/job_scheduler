@@ -1,5 +1,3 @@
-use std::io::Error as IoError;
-
 use axum::{
     Json,
     http::StatusCode,
@@ -9,7 +7,7 @@ use axum::{
 #[derive(Debug)]
 pub enum ServerError {
     Database(sqlx::Error),
-    Internal(IoError),
+    Internal(String),
     NotFound(String),
     BadRequest(String),
 }
@@ -41,11 +39,5 @@ impl IntoResponse for ServerError {
 impl From<sqlx::Error> for ServerError {
     fn from(err: sqlx::Error) -> Self {
         ServerError::Database(err)
-    }
-}
-
-impl From<IoError> for ServerError {
-    fn from(err: IoError) -> Self {
-        ServerError::Internal(err)
     }
 }

@@ -48,7 +48,7 @@ curl -X POST "http://localhost:8000/jobs" \
 ```
 
 **7. View the email**
-Open http://localhost:8025 to see the email in Mailpit's inbox.
+All the emails will be present in Mailpit's local inbox.
 
 ## Architecture
 **Components**

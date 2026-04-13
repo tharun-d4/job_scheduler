@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use axum::{
@@ -6,6 +7,7 @@ use axum::{
     http::StatusCode,
 };
 use chrono::{DateTime, Utc};
+use croner::Cron;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use shared::db::{
@@ -51,11 +53,24 @@ pub async fn create_job(
     State(state): State<Arc<AppState>>,
     Json(job_payload): Json<JobPayload>,
 ) -> Result<(StatusCode, Json<JobId>), ServerError> {
+    let mut run_at = Utc::now();
     let mut run_mode = RunMode::Immediate;
-    if job_payload.schedule_at.is_some() {
+
+    if let Some(time) = job_payload.schedule_at {
+        run_at = time;
         run_mode = RunMode::Scheduled;
     }
-    if job_payload.cron_expression.is_some() {
+
+    if let Some(ref expr) = job_payload.cron_expression {
+        let cron = Cron::from_str(&expr).map_err(|err| {
+            error!(error = ?err);
+            ServerError::BadRequest("Invalid cron expression for a recurring job.".into())
+        })?;
+
+        run_at = cron
+            .find_next_occurrence(&run_at, true)
+            .map_err(|e| ServerError::Internal(e.to_string()))?;
+
         run_mode = RunMode::Recurring;
     }
 
@@ -70,7 +85,7 @@ pub async fn create_job(
             priority: job_payload.priority.unwrap_or(1),
             max_retries: job_payload.max_retries.unwrap_or(1),
             created_at: Utc::now(),
-            run_at: job_payload.schedule_at.unwrap_or(Utc::now()),
+            run_at: run_at,
         },
     )
     .await?;

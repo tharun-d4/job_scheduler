@@ -18,6 +18,8 @@ pub mod state;
 use shared::{config::load_server_config, db::connection, tracing::init_tracing};
 use tracing::{info, instrument};
 
+use crate::error::ServerError;
+
 /// fn init() is the actual fn that setups the server.
 ///
 /// The server loads its configuration from a centralized config.yaml file.
@@ -62,8 +64,12 @@ pub async fn init() -> Result<(), error::ServerError> {
     let bind = format!("{}:{}", config.server.host, config.server.port);
     info!("[+] Server running on {bind:?}...");
 
-    let listener = tokio::net::TcpListener::bind(bind).await?;
-    axum::serve(listener, app).await?;
+    let listener = tokio::net::TcpListener::bind(bind)
+        .await
+        .map_err(|e| ServerError::Internal(e.to_string()))?;
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| ServerError::Internal(e.to_string()))?;
 
     Ok(())
 }
