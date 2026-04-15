@@ -135,9 +135,9 @@ graph TD
 - **🗓️ Scheduled jobs (One-time)**
 - **📊 API to query job status & statistics**
 - **❌ Job Cancellation**
+- **🔁 Periodic / Recurring jobs**
 
 ### Planned Enhancements
-- 🔁 Periodic / Recurring jobs
 - 🖥️ Dashboard for real-time visualization
 - 📈 Benchmarking & performance profiling
 - ⛓️ Job Dependencies & DAG Workflows

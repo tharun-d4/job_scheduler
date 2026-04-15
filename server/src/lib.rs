@@ -37,7 +37,10 @@ use crate::error::ServerError;
 /// It runs the axum server at the host and port defined in the config file.
 ///
 /// Prior to listening to the requests,
-/// the server spawns two specific tasks: Lease recovery and Cleanup.
+/// the server spawns three specific periodic tasks: Rescheduling, Lease recovery and Cleanup.
+///
+/// Rescheduling: Recurring jobs that have completed so far and were not rescheduled will be
+/// rescheduled by this periodic task.
 ///
 /// Lease Recovery Task: Jobs are leased to workers for a specific period of time
 /// (that too is as per the config file).
