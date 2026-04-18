@@ -1,16 +1,27 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    extract::{Request, State},
+    http::Method,
+    middleware::{self, Next},
+    response::Response,
+    routing::get,
+};
 use tower::ServiceBuilder;
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
 };
 use tracing::Level;
 
-use crate::{handlers, state::AppState};
+use crate::{
+    handlers,
+    prometheus::{HttpLabel, HttpMethod},
+    state::AppState,
+};
 
-pub fn create_router(state: AppState) -> Router {
-    let middleware = ServiceBuilder::new().layer(
+pub fn create_router(state: Arc<AppState>) -> Router {
+    let trace_layer = ServiceBuilder::new().layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
             .on_request(DefaultOnRequest::new().level(Level::INFO))
@@ -28,6 +39,39 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route("/jobs/stats", get(handlers::job_stats))
         .route("/jobs/stats/detailed", get(handlers::detailed_job_stats))
-        .with_state(Arc::new(state))
-        .layer(middleware)
+        .layer(middleware::from_fn_with_state(state.clone(), track_metrics))
+        .with_state(state)
+        .layer(trace_layer)
+}
+
+async fn track_metrics(
+    State(state): State<Arc<AppState>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let start = Instant::now();
+
+    let method = match *request.method() {
+        Method::GET => HttpMethod::GET,
+        Method::POST => HttpMethod::POST,
+        Method::PUT => HttpMethod::PUT,
+        Method::DELETE => HttpMethod::DELETE,
+        _ => unimplemented!("No API found with that HTTP method"),
+    };
+    let path = request.uri().path().to_owned();
+
+    let response = next.run(request).await;
+
+    let response_time = start.elapsed().as_secs_f64();
+
+    let label = HttpLabel { method, path };
+
+    state.metrics.http_requests.get_or_create(&label).inc();
+    state
+        .metrics
+        .http_request_duration_seconds
+        .get_or_create(&label)
+        .observe(response_time);
+
+    response
 }

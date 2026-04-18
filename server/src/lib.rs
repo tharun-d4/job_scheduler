@@ -18,6 +18,8 @@ pub mod prometheus;
 pub mod state;
 pub mod utils;
 
+use std::sync::Arc;
+
 use shared::{config::load_server_config, db::connection, tracing::init_tracing};
 use tracing::{info, instrument};
 
@@ -67,7 +69,7 @@ pub async fn init() -> Result<(), error::ServerError> {
     background::rescheduling_recurring_jobs_task(pool.clone(), config.server.lease_recovery).await;
     background::cleanup_task(pool.clone(), config.server.cleanup).await;
 
-    let state = state::AppState::new(pool, registry, metrics);
+    let state = Arc::new(state::AppState::new(pool, registry, metrics));
     let app = app::create_router(state);
 
     let bind = format!("{}:{}", config.server.host, config.server.port);

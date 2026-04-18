@@ -25,7 +25,6 @@ use crate::{
         queries,
     },
     error::ServerError,
-    prometheus::{HttpLabel, HttpMethod},
     state::AppState,
     utils::cron_parsed_to_time,
 };
@@ -140,15 +139,6 @@ pub async fn get_job_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Job>, ServerError> {
-    state
-        .metrics
-        .http_requests
-        .get_or_create(&HttpLabel {
-            method: HttpMethod::GET,
-            path: "/job/{id}".into(),
-        })
-        .inc();
-
     match shared_queries::get_job_by_id(&state.pool, id).await {
         Some(job) => Ok(Json(job)),
         None => Err(ServerError::NotFound("Job not found".to_string())),
