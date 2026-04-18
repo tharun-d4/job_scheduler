@@ -20,7 +20,7 @@ pub struct HttpLabel {
 
 #[derive(Debug)]
 pub struct Metrics {
-    pub http_requests_total: Family<HttpLabel, Counter>,
+    pub http_requests: Family<HttpLabel, Counter>,
     pub http_request_duration_seconds: Family<HttpLabel, Histogram>,
 }
 
@@ -28,7 +28,7 @@ pub fn register_metrics() -> (Registry, Metrics) {
     let mut registry = Registry::default();
 
     let metrics = Metrics {
-        http_requests_total: Family::default(),
+        http_requests: Family::default(),
         http_request_duration_seconds: Family::new_with_constructor(|| {
             Histogram::new([
                 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
@@ -37,9 +37,9 @@ pub fn register_metrics() -> (Registry, Metrics) {
     };
 
     registry.register(
-        "http_requests_total",
+        "http_requests",
         "Total HTTP requests",
-        metrics.http_requests_total.clone(),
+        metrics.http_requests.clone(),
     );
     registry.register(
         "http_request_duration_seconds",

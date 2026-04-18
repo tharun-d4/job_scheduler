@@ -1,8 +1,8 @@
 database:
-  url: "postgres://user:password@127.0.0.1:9000/app_db"
+  url: "postgres://user:password@127.0.0.1:5432/app_db"
 
 server:
-  host: "127.0.0.1"
+  host: "0.0.0.0"
   port: 8000
   db_pool_size: 10
   lease_recovery: 5

@@ -1,24 +1,30 @@
+volumes:
+  pg_data:
+  mail_data:
+
 services:
   db:
-    image: postgres:18
+    image: docker.io/postgres:18
     ports:
-      - 127.0.0.1:9000:5432
+      - 5432:5432
     volumes:
       - pg_data:/var/lib/postgresql
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: app_db
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+
   mail:
-    image: axllent/mailpit
-    restart: unless-stopped
+    image: docker.io/axllent/mailpit
     ports:
       - 127.0.0.1:8025:8025 # Web UI
       - 127.0.0.1:1025:1025 # SMTP Server
     volumes:
       - mail_data:/data
-
-volumes:
-  pg_data:
-  mail_data:
-

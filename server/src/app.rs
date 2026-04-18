@@ -20,6 +20,7 @@ pub fn create_router(state: AppState) -> Router {
 
     Router::new()
         .fallback(handlers::handler_404)
+        .route("/metrics", get(handlers::get_metrics))
         .route("/jobs", get(handlers::list_jobs).post(handlers::create_job))
         .route(
             "/jobs/{id}",

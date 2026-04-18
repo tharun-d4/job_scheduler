@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use axum::{
     Json,
+    body::Body,
     extract::{Path, Query, State},
     http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
+use prometheus_client::encoding::text::encode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use shared::db::{
@@ -22,6 +25,7 @@ use crate::{
         queries,
     },
     error::ServerError,
+    prometheus::{HttpLabel, HttpMethod},
     state::AppState,
     utils::cron_parsed_to_time,
 };
@@ -30,6 +34,20 @@ pub async fn handler_404() -> Result<(), ServerError> {
     Err(ServerError::NotFound(
         "Careful! You are calling an API that doesn't exist".to_string(),
     ))
+}
+
+pub async fn get_metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let mut buffer = String::new();
+
+    encode(&mut buffer, &state.registry).unwrap();
+
+    Response::builder()
+        .header(
+            axum::http::header::CONTENT_TYPE,
+            "application/openmetrics-text; version=1.0.0; charset=utf-8",
+        )
+        .body(Body::from(buffer))
+        .unwrap()
 }
 
 #[derive(Debug, Deserialize)]
@@ -122,6 +140,15 @@ pub async fn get_job_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Job>, ServerError> {
+    state
+        .metrics
+        .http_requests
+        .get_or_create(&HttpLabel {
+            method: HttpMethod::GET,
+            path: "/job/{id}".into(),
+        })
+        .inc();
+
     match shared_queries::get_job_by_id(&state.pool, id).await {
         Some(job) => Ok(Json(job)),
         None => Err(ServerError::NotFound("Job not found".to_string())),
