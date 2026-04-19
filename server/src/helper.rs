@@ -61,7 +61,7 @@ pub async fn reschedule_recurring_jobs(
                 max_retries: job.max_retries,
                 created_at: Utc::now(),
                 run_mode: RunMode::Recurring,
-                run_at: run_at,
+                run_at,
                 parent_job_id: Some(job.parent_job_id.unwrap_or(job.id)),
             }
         })

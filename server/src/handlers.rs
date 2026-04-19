@@ -86,7 +86,7 @@ pub async fn create_job(
     let job_id = shared_queries::insert_job(
         &state.pool,
         CreateJob {
-            run_mode: run_mode,
+            run_mode,
             job_type: job_payload.job_type.clone(),
             payload: job_payload.payload,
             cron_expression: job_payload.cron_expression,
@@ -94,7 +94,7 @@ pub async fn create_job(
             priority: job_payload.priority.unwrap_or(1),
             max_retries: job_payload.max_retries.unwrap_or(1),
             created_at: Utc::now(),
-            run_at: run_at,
+            run_at,
             parent_job_id: None,
         },
     )
@@ -128,7 +128,7 @@ pub async fn cancel_job(
                 let error = String::from("Too late! The job started executing.");
                 error!(job_id = ?id, error = error);
 
-                Err(ServerError::BadRequest(error.into()))
+                Err(ServerError::BadRequest(error))
             } else {
                 info!(job_id = ?id, "Job is cancelled");
                 txn.commit().await?;

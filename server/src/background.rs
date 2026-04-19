@@ -71,13 +71,10 @@ pub async fn rescheduling_recurring_jobs_task(
         loop {
             interval.tick().await;
 
-            if let Err(e) = helper::reschedule_recurring_jobs(&pool, &state).await {
-                match e {
-                    ServerError::Database(err) => {
-                        error!(error = ?err, "Error occurred while rescheduling recurring jobs");
-                    }
-                    _ => {}
-                }
+            if let Err(ServerError::Database(err)) =
+                helper::reschedule_recurring_jobs(&pool, &state).await
+            {
+                error!(error = ?err, "Error occurred while rescheduling recurring jobs");
             }
         }
     })
