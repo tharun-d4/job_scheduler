@@ -4080,6 +4080,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "lettre",
+ "prometheus-client",
  "reqwest",
  "serde",
  "serde_json",

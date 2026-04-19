@@ -1,4 +1,3 @@
-use lettre::{Tokio1Executor, transport::smtp::AsyncSmtpTransport};
 use shared::db::models::Job;
 use sqlx::postgres::PgPool;
 use tokio::time::Instant;
@@ -9,15 +8,16 @@ use crate::{
     db::queries,
     error::WorkerError,
     handlers::{email::send_email, webhook::send_webhook},
+    prometheus::JobType,
+    state::AppState,
 };
 
-#[instrument(skip(pool, smtp_sender))]
+#[instrument(skip(pool, state))]
 pub async fn execute_job(
     pool: &PgPool,
+    state: &AppState,
     job: Job,
     worker_id: Uuid,
-    smtp_sender: AsyncSmtpTransport<Tokio1Executor>,
-    client: reqwest::Client,
 ) -> Result<(), WorkerError> {
     let job_id = job.id;
 
@@ -27,8 +27,8 @@ pub async fn execute_job(
 
     let start = Instant::now();
     let result = match job.job_type.as_ref() {
-        "send_email" => send_email(smtp_sender, job.payload).await,
-        "send_webhook" => send_webhook(client, job.payload).await,
+        "send_email" => send_email(state.smtp_sender.clone(), job.payload).await,
+        "send_webhook" => send_webhook(state.client.clone(), job.payload).await,
         "will_crash" => {
             error!("Worker will crash when running this job");
             panic!("Worker crashed when running this job");
@@ -44,12 +44,22 @@ pub async fn execute_job(
     let end = start.elapsed();
     info!(duration_ms = end.as_millis(), "Job executed");
 
+    let job_type_clone = job.job_type.clone();
+
     match result {
         Ok(res) => {
             info!("Job completed");
             let moved_jobs = queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
             if moved_jobs != 1 {
                 error!(moved_jobs = moved_jobs, "Failed to mark job as completed");
+            } else {
+                state
+                    .metrics
+                    .jobs_completed
+                    .get_or_create(&JobType {
+                        job_type: job.job_type,
+                    })
+                    .inc();
             }
         }
         Err(err) => {
@@ -64,6 +74,14 @@ pub async fn execute_job(
                     queries::mark_job_as_failed(pool, job_id, worker_id, err.to_string()).await?;
                 if moved_rows != 1 {
                     error!(moved_rows = moved_rows, "Failed to job as failed");
+                } else {
+                    state
+                        .metrics
+                        .jobs_failed
+                        .get_or_create(&JobType {
+                            job_type: job.job_type,
+                        })
+                        .inc();
                 }
             } else {
                 let updated_rows = queries::update_job_error_and_backoff_time(
@@ -79,6 +97,14 @@ pub async fn execute_job(
                         updated_rows = updated_rows,
                         "Failed to update job error and retry time"
                     );
+                } else {
+                    state
+                        .metrics
+                        .jobs_retried
+                        .get_or_create(&JobType {
+                            job_type: job.job_type,
+                        })
+                        .inc();
                 }
             }
         }
@@ -86,6 +112,14 @@ pub async fn execute_job(
 
     let end = start.elapsed();
     info!(overall_duration_ms = end.as_millis(), "Job updated in DB");
+
+    state
+        .metrics
+        .jobs_processing_duration_seconds
+        .get_or_create(&JobType {
+            job_type: job_type_clone,
+        })
+        .observe(end.as_secs_f64());
 
     Ok(())
 }

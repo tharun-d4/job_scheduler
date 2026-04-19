@@ -36,19 +36,36 @@ pub mod error;
 pub mod executor;
 pub mod handlers;
 pub mod heartbeat;
+pub mod prometheus;
+pub mod state;
+
+use std::sync::Arc;
 
 use shared::{config::load_worker_config, db::connection, tracing::init_tracing};
 use tokio::signal::unix::{SignalKind, signal};
 use tracing::{error, info, instrument};
 use uuid::Uuid;
 
-use crate::{db::queries, error::WorkerError, handlers::email};
+use crate::{
+    db::queries, error::WorkerError, handlers::email, prometheus::register_metrics, state::AppState,
+};
 
 #[instrument]
 pub async fn init() -> Result<(), WorkerError> {
     let _trace_guard = init_tracing("worker");
     let config = load_worker_config("./config")
         .map_err(|e| WorkerError::permanent("Failed to load worker config").set_source(e))?;
+
+    let (registry, metrics) = register_metrics();
+    let smtp_sender = email::smtp_sender(&config.mail_server.host, config.mail_server.port);
+    let client = reqwest::Client::new();
+
+    let state = AppState {
+        registry: Arc::new(registry),
+        metrics: Arc::new(metrics),
+        client,
+        smtp_sender,
+    };
 
     let pool = connection::create_pool(config.database, config.worker.db_pool_size)
         .await
@@ -68,9 +85,6 @@ pub async fn init() -> Result<(), WorkerError> {
 
     heartbeat::start_heartbeat_task(pool.clone(), worker_id, config.worker.heartbeat).await;
 
-    let smtp_sender = email::smtp_sender(&config.mail_server.host, config.mail_server.port);
-    let client = reqwest::Client::new();
-
     let mut terminate_signal = signal(SignalKind::terminate())
         .map_err(|e| WorkerError::permanent("Failed to create a SIGTERM listener").set_source(e))?;
     let mut iterrupt_signal = signal(SignalKind::interrupt())
@@ -89,7 +103,7 @@ pub async fn init() -> Result<(), WorkerError> {
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
                 match claim_result {
                     Ok(Some(job)) => {
-                        executor::execute_job(&pool, job, worker_id, smtp_sender.clone(), client.clone()).await?;
+                        executor::execute_job(&pool, &state, job, worker_id).await?;
                     }
                     Ok(None) => {
                         // No job to run
