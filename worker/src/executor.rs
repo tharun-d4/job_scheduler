@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use shared::db::models::Job;
 use sqlx::postgres::PgPool;
 use tokio::time::Instant;
@@ -15,7 +17,7 @@ use crate::{
 #[instrument(skip(pool, state))]
 pub async fn execute_job(
     pool: &PgPool,
-    state: &AppState,
+    state: Arc<AppState>,
     job: Job,
     worker_id: Uuid,
 ) -> Result<(), WorkerError> {

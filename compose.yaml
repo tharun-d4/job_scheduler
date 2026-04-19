@@ -14,19 +14,26 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: app_db
 
+  push_gateway:
+    image: docker.io/prom/pushgateway:latest
+    ports:
+      - 9091:9091
+
   prometheus:
     image: docker.io/prom/prometheus:latest
     ports:
       - 9090:9090
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - push_gateway
 
-  grafana:
-    image: docker.io/grafana/grafana:latest
-    ports:
-      - 3000:3000
-    volumes:
-      - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasources.yml
+  #grafana:
+  #  image: docker.io/grafana/grafana:latest
+  #  ports:
+  #    - 3000:3000
+  #  volumes:
+  #    - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasources.yml
 
   mail:
     image: docker.io/axllent/mailpit

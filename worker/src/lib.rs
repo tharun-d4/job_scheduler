@@ -31,11 +31,11 @@
 //! failed to run the job.
 //!
 
+pub mod background;
 pub mod db;
 pub mod error;
 pub mod executor;
 pub mod handlers;
-pub mod heartbeat;
 pub mod prometheus;
 pub mod state;
 
@@ -60,12 +60,12 @@ pub async fn init() -> Result<(), WorkerError> {
     let smtp_sender = email::smtp_sender(&config.mail_server.host, config.mail_server.port);
     let client = reqwest::Client::new();
 
-    let state = AppState {
+    let state = Arc::new(AppState {
         registry: Arc::new(registry),
         metrics: Arc::new(metrics),
         client,
         smtp_sender,
-    };
+    });
 
     let pool = connection::create_pool(config.database, config.worker.db_pool_size)
         .await
@@ -83,7 +83,13 @@ pub async fn init() -> Result<(), WorkerError> {
         worker_id, pid
     );
 
-    heartbeat::start_heartbeat_task(pool.clone(), worker_id, config.worker.heartbeat).await;
+    background::heartbeat_task(pool.clone(), worker_id, config.worker.heartbeat).await;
+    background::push_metrics_task(
+        state.clone(),
+        worker_id,
+        config.worker.metrics_push_interval,
+    )
+    .await;
 
     let mut terminate_signal = signal(SignalKind::terminate())
         .map_err(|e| WorkerError::permanent("Failed to create a SIGTERM listener").set_source(e))?;
@@ -103,7 +109,7 @@ pub async fn init() -> Result<(), WorkerError> {
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
                 match claim_result {
                     Ok(Some(job)) => {
-                        executor::execute_job(&pool, &state, job, worker_id).await?;
+                        executor::execute_job(&pool, state.clone(), job, worker_id).await?;
                     }
                     Ok(None) => {
                         // No job to run

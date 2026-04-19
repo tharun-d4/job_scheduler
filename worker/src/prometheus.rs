@@ -1,8 +1,12 @@
+use std::sync::Arc;
+
 use prometheus_client::{
-    encoding::EncodeLabelSet,
+    encoding::{EncodeLabelSet, text::encode},
     metrics::{counter::Counter, family::Family, histogram::Histogram},
     registry::Registry,
 };
+use reqwest::Client;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, EncodeLabelSet)]
 pub struct JobType {
@@ -52,4 +56,23 @@ pub fn register_metrics() -> (Registry, Metrics) {
     );
 
     (registry, metrics)
+}
+
+pub async fn push_metrics(registry: Arc<Registry>, client: Client, worker_id: Uuid) {
+    let mut buffer = String::new();
+
+    encode(&mut buffer, &registry).unwrap();
+
+    client
+        .post(format!(
+            "http://localhost:9091/metrics/job/worker/worker_id/{worker_id}"
+        ))
+        .header(
+            "Content-Type",
+            "application/openmetrics-text; version=1.0.0; charset=utf-8",
+        )
+        .body(buffer)
+        .send()
+        .await
+        .unwrap();
 }
