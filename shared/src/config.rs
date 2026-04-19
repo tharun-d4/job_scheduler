@@ -12,6 +12,7 @@ pub struct Server {
     pub port: u16,
     pub db_pool_size: u8,
     pub lease_recovery: u8,
+    pub reschedule: u8,
     pub cleanup: u8,
 }
 
@@ -20,6 +21,7 @@ pub struct Worker {
     pub db_pool_size: u8,
     pub heartbeat: u8,
     pub lease_duration: u8,
+    pub metrics_push_interval: u8,
 }
 
 #[derive(Debug, Deserialize)]

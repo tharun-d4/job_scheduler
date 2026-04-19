@@ -6,12 +6,14 @@ server:
   port: 8000
   db_pool_size: 10
   lease_recovery: 5
+  reschedule: 5
   cleanup: 30
 
 worker:
   db_pool_size: 4
   heartbeat: 10
   lease_duration: 15
+  metrics_push_interval: 5
 
 supervisor:
   workers: 5

@@ -71,7 +71,7 @@ pub async fn init() -> Result<(), error::ServerError> {
     background::rescheduling_recurring_jobs_task(
         pool.clone(),
         state.clone(),
-        config.server.lease_recovery,
+        config.server.reschedule,
     )
     .await;
     background::cleanup_task(pool, config.server.cleanup).await;
