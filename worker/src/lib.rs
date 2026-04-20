@@ -109,7 +109,8 @@ pub async fn init() -> Result<(), WorkerError> {
             claim_result = queries::claim_job(&pool, worker_id, config.worker.lease_duration) => {
                 match claim_result {
                     Ok(Some(job)) => {
-                        executor::execute_job(&pool, state.clone(), job, worker_id).await?;
+                        let job_id = job.id;
+                        executor::execute_job(&pool, state.clone(), job, worker_id, job_id).await?;
                     }
                     Ok(None) => {
                         // No job to run

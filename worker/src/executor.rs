@@ -20,14 +20,13 @@ pub async fn execute_job(
     state: Arc<AppState>,
     job: Job,
     worker_id: Uuid,
+    job_id: Uuid,
 ) -> Result<(), WorkerError> {
-    let job_id = job.id;
+    let start = Instant::now();
 
     let retries_exhausted = job.attempts == job.max_retries;
-
     let backoff_secs = retry_backoff_secs(job.attempts);
 
-    let start = Instant::now();
     let result = match job.job_type.as_ref() {
         "send_email" => send_email(state.smtp_sender.clone(), job.payload).await,
         "send_webhook" => send_webhook(state.client.clone(), job.payload).await,
@@ -50,14 +49,13 @@ pub async fn execute_job(
 
     match result {
         Ok(res) => {
-            info!("Job completed");
             let marked_jobs = queries::mark_job_as_completed(pool, job_id, worker_id, res).await?;
             if marked_jobs != 1 {
                 error!(marked_jobs = marked_jobs, "Failed to mark job as completed");
             } else {
                 info!(
-                    "Incrementing jobs_completed metric for job_type: {:?}",
-                    job.job_type
+                    job_type = ?job.job_type,
+                    "Incrementing jobs_completed metric",
                 );
                 state
                     .metrics
@@ -76,14 +74,14 @@ pub async fn execute_job(
             );
 
             if err.is_permanent() || retries_exhausted {
-                let moved_rows =
+                let marked_jobs =
                     queries::mark_job_as_failed(pool, job_id, worker_id, err.to_string()).await?;
-                if moved_rows != 1 {
-                    error!(moved_rows = moved_rows, "Failed to job as failed");
+                if marked_jobs != 1 {
+                    error!(marked_jobs = marked_jobs, "Failed to job as failed");
                 } else {
                     info!(
-                        "Incrementing jobs_failed metric for job_type: {:?}",
-                        job.job_type
+                        job_type = ?job.job_type,
+                        "Incrementing jobs_failed metric"
                     );
                     state
                         .metrics
@@ -109,8 +107,8 @@ pub async fn execute_job(
                     );
                 } else {
                     info!(
-                        "Incrementing jobs_retried metric for job_type: {:?}",
-                        job.job_type
+                        job_type = ?job.job_type,
+                        "Incrementing jobs_retried metric"
                     );
                     state
                         .metrics
@@ -125,12 +123,13 @@ pub async fn execute_job(
     }
 
     let end = start.elapsed();
-    info!(overall_duration_ms = end.as_millis(), "Job updated in DB");
 
     info!(
-        "Observing job_processing_duration_seconds metric for job_type: {:?}",
-        job_type_clone
+        overall_duration_ms = end.as_millis(),
+        job_type = ?job_type_clone,
+        "Observing job_processing_duration_seconds metric"
     );
+
     state
         .metrics
         .job_processing_duration_seconds
